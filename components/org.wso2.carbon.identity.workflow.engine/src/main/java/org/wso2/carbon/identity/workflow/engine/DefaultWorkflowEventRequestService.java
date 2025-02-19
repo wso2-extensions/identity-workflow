@@ -116,7 +116,6 @@ public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventR
             associations = requestAssociationDAO.getWorkflowAssociationsForRequest(
                     workflowRequest.getEventType(), workflowRequest.getTenantId());
         } catch (InternalWorkflowException e) {
-            //
         }
         return associations;
     }
