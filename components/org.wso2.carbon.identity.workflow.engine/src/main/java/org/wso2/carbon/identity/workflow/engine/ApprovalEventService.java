@@ -174,9 +174,9 @@ public class ApprovalEventService {
     private List<String> getRoleNamesFromUser(String approverId) {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        List<String> roleIDList;
+
         try{
-            roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().getRoleIdListOfUser(approverId, tenantDomain);
+            List<String> roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().getRoleIdListOfUser(approverId, tenantDomain);
             String roleName;
             List<String> roleNameList = new ArrayList<>();
             for (String roleId : roleIDList) {
