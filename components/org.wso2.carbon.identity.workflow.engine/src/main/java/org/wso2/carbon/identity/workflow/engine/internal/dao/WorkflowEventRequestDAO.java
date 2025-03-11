@@ -103,6 +103,15 @@ public interface WorkflowEventRequestDAO {
     List<String> getRequestsList(String approverName);
 
     /**
+     * Returns the events list according to the user and type.
+     *
+     * @param approverType entity type.
+     * @param approverType entity value.
+     * @return events list.
+     */
+    List<String> getRequestsList(String approverType, String approverName);
+
+    /**
      * Returns the event type given the request ID.
      *
      * @param requestId the request ID that need to be checked.

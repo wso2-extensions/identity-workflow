@@ -331,6 +331,32 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
     /**
      * {@inheritDoc}
      */
+    public List<String> getRequestsList(String approverType, String approverName) {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        List<String> requestIdList;
+        try {
+            requestIdList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
+                            GET_REQUEST_ID_FROM_APPROVER_AND_TYPE, (resultSet, rowNumber) ->
+                            resultSet.getString(WorkflowEngineConstants.EVENT_ID),
+                    preparedStatement -> {
+                        preparedStatement.setString(1, approverName);
+                        preparedStatement.setString(2, approverType);
+                    });
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error occurred while retrieving request id from" +
+                    "approver name: %s" + " of approver type: %s", approverName, approverType);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+        return requestIdList;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getEventType(String requestId) {
 

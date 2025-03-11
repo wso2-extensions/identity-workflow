@@ -39,6 +39,8 @@ public class WorkflowEngineConstants {
         public static final String GET_ENTITY_NAME = "SELECT ENTITY_NAME FROM WF_REQUEST_ENTITY_RELATIONSHIP WHERE REQUEST_ID = ?";
         public static final String GET_TASK_ID_FROM_REQUEST = "SELECT TASK_ID FROM WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID= ?";
         public static final String GET_REQUEST_ID_FROM_APPROVER = "SELECT EVENT_ID FROM WF_WORKFLOW_APPROVAL_RELATION WHERE APPROVER_NAME= ?";
+        public static final String GET_REQUEST_ID_FROM_APPROVER_AND_TYPE = "SELECT EVENT_ID FROM " +
+                "WF_WORKFLOW_APPROVAL_RELATION WHERE APPROVER_NAME= ? AND APPROVER_TYPE= ?";
         public static final String GET_TASK_STATUS = "SELECT DISTINCT TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String GET_STATUS = "SELECT DISTINCT TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ?";
         public static final String GET_CREATED_USER = "SELECT CREATED_BY FROM WF_REQUEST WHERE UUID= ?";
@@ -53,11 +55,11 @@ public class WorkflowEngineConstants {
 
     public static class ParameterName {
 
-        public static final String USER_AND_ROLE_STEP = "UserAndRole";
+        public static final String USER_AND_ROLE_STEP = "ApprovalSteps";
         public static final String TASK_STATUS_DEFAULT = "RESERVED";
         public static final String REQUEST_ID = "REQUEST ID";
-        public static final String TASK_SUBJECT = "HTSubject";
-        public static final String TASK_DESCRIPTION = "HTDescription";
+        public static final String TASK_SUBJECT = "ApprovalTaskSubject";
+        public static final String TASK_DESCRIPTION = "ApprovalTaskDescription";
         public static final String PRIORITY = "High";
         public static final String APPROVAL_TASK = "Approval task";
         public static final String INTERNAL_USER = "Internal/";
@@ -66,9 +68,12 @@ public class WorkflowEngineConstants {
         public static final String SYSTEM_PRIMARY_USER = "system_primary_";
         public static final String ASSIGNEE_TYPE = "Type";
         public static final String CREDENTIAL = "Credential";
-        public static final String HT_SUBJECT = "HTSubject";
+        public static final String HT_SUBJECT = "ApprovalTaskSubject";
         public static final String INITIATED_BY = "Initiated_by ";
         public static final String ENTITY_NAME = " User_Name:";
+        public static final String ENTITY_TYPE_ROLES = "roles";
+        public static final String ENTITY_TYPE_USERS = "users";
+
     }
 
     public enum TaskStatus {
