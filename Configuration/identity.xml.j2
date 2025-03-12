@@ -1,0 +1,13 @@
+<WorkflowEngines>
+   	 <SimpleWorkflowEngine>
+    		<Enable>{{workflow_engines.simple_workflow_engine.enable_simple_workflow_engine}}</Enable>
+   		<AllowNewDefinitions>{{workflow_engines.simple_workflow_engine.allow_creating_new_definitions}}</AllowNewDefinitions>
+   		<EngageNewWorkflow>{{workflow_engines.simple_workflow_engine.engage_new_workflow}}</EngageNewWorkflow>
+   		<AllowApprovals>{{workflow_engines.simple_workflow_engine.enable_approvals}}</AllowApprovals>
+    	</SimpleWorkflowEngine>
+    	<BPELEngine>
+    		<AllowNewDefinitions>{{workflow_engines.bpel_workflow_engine.allow_creating_new_definitions}}</AllowNewDefinitions>
+    		<EngageNewWorkflow>{{workflow_engines.bpel_workflow_engine.engage_new_workflow}}</EngageNewWorkflow>
+    		<AllowApprovals>{{workflow_engines.bpel_workflow_engine.enable_approvals}}</AllowApprovals>
+    	</BPELEngine>
+</WorkflowEngines>

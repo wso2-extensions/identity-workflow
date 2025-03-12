@@ -1,224 +1,85 @@
 package org.wso2.carbon.identity.workflow.engine;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineClientException;
-import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
-import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowEventRequestDAO;
-import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.WorkflowEventRequestDAOImpl;
-import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowExecutorManagerService;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowExecutorManagerServiceImpl;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementServiceImpl;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
-import org.wso2.carbon.identity.workflow.mgt.bean.RequestParameter;
-import org.wso2.carbon.identity.workflow.mgt.bean.Workflow;
 import org.wso2.carbon.identity.workflow.mgt.bean.WorkflowAssociation;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
-import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
-import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
- * Default Workflow Event Request service implementation.
+ * Default Workflow Event Request service interface.
  */
-public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventRequest {
-
-    private WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-    private static final Log log = LogFactory.getLog(DefaultWorkflowEventRequestService.class);
+public interface DefaultWorkflowEventRequestService {
 
     /**
-     * {@inheritDoc}
+     * Add who approves the relevant request.
+     *
+     * @param request       workflow request object.
+     * @param parameterList parameterList [ParamName & ParamValue].
      */
-    @Override
-    public void addApproversOfRequests(WorkflowRequest request, List<Parameter> parameterList) {
-
-        String taskId = UUID.randomUUID().toString();
-        String eventId = getRequestId(request);
-        String workflowId = getWorkflowId(request);
-        String approverType;
-        String approverName;
-        int currentStepValue = getStateOfRequest(eventId, workflowId);
-        if (currentStepValue == 0) {
-            createStatesOfRequest(eventId, workflowId, currentStepValue);
-        }
-        currentStepValue += 1;
-        updateStateOfRequest(eventId, workflowId);
-            for (Parameter parameter : parameterList) {
-                if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
-                    String[] stepName = parameter.getqName().split("-");
-                    int step = Integer.parseInt(stepName[2]);
-                    if (currentStepValue == step) {
-                        approverType = stepName[stepName.length - 1];
-
-                        String approver = parameter.getParamValue();
-                        if (approver != null && !approver.isEmpty()) {
-                            String[] approvers = approver.split(",", 0);
-                            for (String name : approvers) {
-                                approverName = name;
-                                String taskStatus= WorkflowEngineConstants.ParameterName.TASK_STATUS_DEFAULT;
-                                workflowEventRequestDAO.addApproversOfRequest(taskId, eventId, workflowId,
-                                        approverType, approverName,taskStatus);
-                            }
-                        }
-                    }
-                }
-        }
-    }
-
-    private String getRequestId(WorkflowRequest request) {
-
-        List<RequestParameter> requestParameter;
-        Object event = null;
-        for (int i = 0; i < request.getRequestParameters().size(); i++) {
-            requestParameter = request.getRequestParameters();
-            if (requestParameter.get(i).getName().equals(WorkflowEngineConstants.ParameterName.REQUEST_ID)) {
-                event = requestParameter.get(i).getValue();
-            }
-        }
-        return (String) event;
-    }
+    void addParamDetailsOfEvent(WorkflowRequest request, List<Parameter> parameterList);
 
     /**
-     * {@inheritDoc}
+     * Get taskId from WF_REQUEST_APPROVAL_RELATION table.
+     *
+     * @param eventId   the event ID that need to be checked.
+     * @return task Id.
      */
-    @Override
-    public String getWorkflowId(WorkflowRequest request) {
-
-        WorkflowManagementService workflowManagementService = new WorkflowManagementServiceImpl();
-        List<WorkflowAssociation> associations = getAssociations(request);
-        String workflowId = null;
-        for (WorkflowAssociation association : associations) {
-            try {
-                Workflow  workflow = workflowManagementService.getWorkflow(association.getWorkflowId());
-                workflowId = workflow.getWorkflowId();
-            } catch (WorkflowException e) {
-                throw new WorkflowEngineClientException(
-                        WorkflowEngineConstants.ErrorMessages.ASSOCIATION_NOT_FOUND.getCode(),
-                        WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getDescription());
-            }
-        }
-        return workflowId;
-    }
+    String getTaskIDOfEvent(String eventId);
 
     /**
-     * {@inheritDoc}
+     * Delete approver details using task Id.
+     *
+     * @param taskId random generated unique Id.
      */
-    @Override
-    public List<WorkflowAssociation> getAssociations(WorkflowRequest workflowRequest) {
-
-        List<WorkflowAssociation> associations;
-        WorkflowExecutorManagerService workFlowExecutorManagerService = new WorkflowExecutorManagerServiceImpl();
-        try {
-            associations = workFlowExecutorManagerService.getWorkflowAssociationsForRequest(
-                    workflowRequest.getEventType(), workflowRequest.getTenantId());
-        } catch (InternalWorkflowException e) {
-            throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.ASSOCIATION_NOT_FOUND.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.ASSOCIATION_NOT_FOUND.getDescription());
-        }
-        return associations;
-    }
+     void deleteTask(String taskId);
 
     /**
-     * {@inheritDoc}
+     * Add current step.
+     *
+     * @param eventId the event ID that need to be checked.
+     * @param workflowId workflow id.
+     * @param currentStep current step of the flow.
      */
-    @Override
-    public String getApprovalOfRequest(String eventId) {
-
-        if (StringUtils.isEmpty(eventId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cannot retrieve task from eventID: " + eventId);
-            }
-            throw buildTaskNotFoundError();
-        }
-        return workflowEventRequestDAO.getApproversOfRequest(eventId);
-    }
+    void addCurrentStepOfEvent(String eventId, String workflowId, int currentStep);
 
     /**
-     * {@inheritDoc}
+     * Get current step from the table.
+     *
+     * @param eventId    the event ID that need to be checked.
+     * @param workflowId workflow Id.
+     * @return currentStep.
      */
-    @Override
-    public void deleteApprovalOfRequest(String taskId) {
-
-        if (StringUtils.isEmpty(taskId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cannot delete task from taskID: " + taskId);
-            }
-        }
-        workflowEventRequestDAO.deleteApproversOfRequest(taskId);
-    }
+     int getCurrentStepOfEvent(String eventId, String workflowId);
 
     /**
-     * {@inheritDoc}
+     *Update current step according to the eventId and workflowId.
+     *
+     * @param eventId the event ID that need to be checked.
+     * @param workflowId workflow Id.
      */
-    @Override
-    public void createStatesOfRequest(String eventId, String workflowId, int currentStep) {
-
-        if (StringUtils.isEmpty(eventId) || StringUtils.isEmpty(workflowId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cannot add task from event ID: " + eventId);
-            }
-            throw buildTaskNotFoundError();
-        }
-        workflowEventRequestDAO.createStatesOfRequest(eventId, workflowId, currentStep);
-    }
+    void updateCurrentStepOfEvent(String eventId, String workflowId);
 
     /**
-     * {@inheritDoc}
+     * Get related associations.
+     *
+     * @param workflowRequest request object.
+     * @return association list.
      */
-    @Override
-    public int getStateOfRequest(String eventId, String workflowId) {
-
-        if (StringUtils.isEmpty(eventId) || StringUtils.isEmpty(workflowId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cannot retrieve task step from eventID: " + eventId);
-            }
-            throw buildTaskNotFoundError();
-        }
-        return workflowEventRequestDAO.getStateOfRequest(eventId, workflowId);
-    }
+    List<WorkflowAssociation> getAssociations(WorkflowRequest workflowRequest);
 
     /**
-     * {@inheritDoc}
+     * Get relevant workflow id to request.
+     *
+     * @param request request object.
+     * @return workflow Id.
      */
-    @Override
-    public void updateStateOfRequest(String eventId, String workflowId) {
-
-        if (StringUtils.isEmpty(eventId) || StringUtils.isEmpty(workflowId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cannot update task from eventID: " + eventId);
-            }
-            throw buildTaskNotFoundError();
-        }
-        int currentStep = getStateOfRequest(eventId, workflowId);
-        currentStep += 1;
-        workflowEventRequestDAO.updateStateOfRequest(eventId, workflowId, currentStep);
-    }
+    String getWorkflowId(WorkflowRequest request);
 
     /**
-     * {@inheritDoc}
+     * Delete the current step using giving eventId.
+     *
+     * @param eventId the event ID that need to be checked.
      */
-    @Override
-    public void deleteStateOfRequest(String eventId) {
-
-        if (StringUtils.isEmpty(eventId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cannot delete task from eventID: " + eventId);
-            }
-            throw buildTaskNotFoundError();
-        }
-        workflowEventRequestDAO.deleteCurrentStepOfRequest(eventId);
-    }
-
-    private WorkflowEngineServerException buildTaskNotFoundError() {
-
-        return new WorkflowEngineServerException(
-                WorkflowEngineConstants.ErrorMessages.TASK_NOT_FOUND.getCode(),
-                WorkflowEngineConstants.ErrorMessages.TASK_NOT_FOUND.getDescription());
-    }
+    void deleteCurrentStepOfEvent(String eventId);
 }

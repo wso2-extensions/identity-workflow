@@ -3,7 +3,7 @@ package org.wso2.carbon.identity.workflow.engine.model;
 /**
  * model class for task subject & task description.
  */
-public class TaskDetails {
+public class RequestDetails {
 
     String taskDescription;
     String taskSubject;

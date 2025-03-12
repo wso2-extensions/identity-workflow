@@ -25,12 +25,12 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public void addApproversOfRequest(String taskId, String eventId, String workflowId, String approverType,
-                                      String approverName, String taskStatus) {
+    public void addApproverDetailsOfEvent(String taskId, String eventId, String workflowId, String approverType,
+                                          String approverName, String taskStatus) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
-            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.ADD_APPROVAL_LIST_RELATED_TO_USER,
+            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.ADD_APPROVAL_LIST_RELATED_TO_REQUEST,
                     preparedStatement -> {
                         preparedStatement.setString(1, taskId);
                         preparedStatement.setString(2, eventId);
@@ -53,13 +53,13 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      *{@inheritDoc}
      */
     @Override
-    public String getApproversOfRequest(String eventId) {
+    public String getTaskIDOfEvent(String eventId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String taskIdExists;
         try {
             taskIdExists = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_TASK_ID_RELATED_TO_USER,
+                            GET_TASK_ID_RELATED_TO_EVENT,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN))),
                     preparedStatement -> preparedStatement.setString(1, eventId));
@@ -81,11 +81,11 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      *{@inheritDoc}
      */
     @Override
-    public void deleteApproversOfRequest(String taskId) {
+    public void deleteApproversOfTask(String taskId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
-            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.DELETE_APPROVAL_LIST_RELATED_TO_USER,
+            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.DELETE_APPROVAL_LIST_RELATED_TO_TASK,
                     preparedStatement -> preparedStatement.setString(1, taskId));
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error while deleting the approver details from taskId:%s", taskId);
@@ -100,7 +100,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      *{@inheritDoc}
      */
     @Override
-    public void createStatesOfRequest(String eventId, String workflowId, int currentStep) {
+    public void createCurrentStepOfEvent(String eventId, String workflowId, int currentStep) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
@@ -124,7 +124,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public int getStateOfRequest(String eventId, String workflowId) {
+    public int getCurrentStepOfEvent(String eventId, String workflowId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String stepExists;
@@ -154,11 +154,11 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      *{@inheritDoc}
      */
     @Override
-    public void updateStateOfRequest(String eventId, String workflowId, int currentStep) {
+    public void updateCurrentStepOfEvent(String eventId, String workflowId, int currentStep) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
-            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.UPDATE_STATE_OF_REQUEST,
+            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.UPDATE_CURRENT_STEP_OF_EVENT,
                     (preparedStatement -> {
                         setPreparedStatementForStateOfRequest(currentStep, eventId, workflowId, preparedStatement);
                         preparedStatement.setInt(1, currentStep);
@@ -210,7 +210,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public List<Integer> getRolesID(String userName) {
+    public List<Integer> getRolesIDOfUser(String userName) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         List<Integer> roleIdList;
@@ -234,7 +234,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public List<String> getRoleNames(int roleId) {
+    public List<String> getRoleNamesOfRoleID(int roleId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         List<String> roleNameList;
@@ -258,7 +258,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public String getRequestID(String taskId) {
+    public String getRequestIDFromTask(String taskId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String requestId;
@@ -283,7 +283,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      *{@inheritDoc}
      */
     @Override
-    public String getInitiatedUser(String requestId) {
+    public String getInitiatedUserOfRequest(String requestId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String createdBy;
@@ -308,7 +308,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public List<String> getRequestsList(String approverName) {
+    public List<String> getEventsListOfApprover(String approverName) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         List<String> requestIdList;
@@ -332,7 +332,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public String getEventType(String requestId) {
+    public String getEventTypeOfEvent(String eventId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String eventType;
@@ -341,10 +341,10 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
                             GET_EVENT_TYPE,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.EVENT_TYPE_COLUMN))),
-                    preparedStatement -> preparedStatement.setString(1, requestId));
+                    preparedStatement -> preparedStatement.setString(1, eventId));
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving event type from" +
-                    "request : %s", requestId);
+                    "request : %s", eventId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -357,7 +357,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public String getTaskStatusOfRequest(String taskId) {
+    public String getTaskStatusOfTask(String taskId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String taskStatus;
@@ -382,13 +382,13 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public String getStatusOfTask(String requestId) {
+    public String getStatusOfRequest(String requestId) {
 
        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
             String taskStatus;
             try {
                 taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                                GET_STATUS,
+                                GET_STATUS_OF_EVENT,
                         ((resultSet, i) -> (
                                 resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN))),
                         preparedStatement -> preparedStatement.setString(1, requestId));
@@ -407,7 +407,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public void updateStatusOfRequest(String taskId, String taskStatus) {
+    public void updateStatusOfTask(String taskId, String taskStatus) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
@@ -431,7 +431,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public String getRelationshipId(String eventId) {
+    public String getRelationshipId(String requestId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String taskStatus;
@@ -440,10 +440,10 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
                             GET_REQUEST_ID_OF_RELATIONSHIP,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.RELATIONSHIP_ID_IN_REQUEST_COLUMN))),
-                    preparedStatement -> preparedStatement.setString(1, eventId));
+                    preparedStatement -> preparedStatement.setString(1, requestId));
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving relationship ID from" +
-                    "event Id: %s", eventId);
+                    "event Id: %s", requestId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -462,7 +462,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
         List<String> taskIdList;
         try {
             taskIdList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_TASK_ID_FROM_REQUEST, (resultSet, rowNumber) ->
+                            GET_TASK_ID_FROM_EVENT, (resultSet, rowNumber) ->
                             resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN),
                     preparedStatement -> preparedStatement.setString(1, eventId));
         } catch (DataAccessException e) {
@@ -600,5 +600,32 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
             throw new WorkflowEngineServerException(errorMessage, e);
         }
         return taskStatus;
+    }
+
+    /**
+     *{@inheritDoc}
+     */
+    @Override
+    public String getTask(String taskId){
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        String taskExist;
+        try {
+            taskExist = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.GET_TASK_DATA,
+                    ((resultSet, i) -> (
+                            resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN))),
+                    preparedStatement -> preparedStatement.setString(1, taskId));
+            if (taskExist == null) {
+                return null;
+            }
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error occurred while retrieving taskDataDTO from" +
+                    "task Id: %s", taskId);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+        return taskExist;
     }
 }

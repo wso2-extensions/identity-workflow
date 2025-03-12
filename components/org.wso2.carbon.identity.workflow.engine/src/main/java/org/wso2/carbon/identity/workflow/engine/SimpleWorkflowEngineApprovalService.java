@@ -13,7 +13,7 @@ import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowEventReques
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.WorkflowEventRequestDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.model.PagePagination;
 import org.wso2.carbon.identity.workflow.engine.model.TStatus;
-import org.wso2.carbon.identity.workflow.engine.model.TaskDetails;
+import org.wso2.carbon.identity.workflow.engine.model.RequestDetails;
 import org.wso2.carbon.identity.workflow.engine.model.TaskModel;
 import org.wso2.carbon.identity.workflow.engine.model.TaskParam;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
@@ -45,7 +45,7 @@ import java.util.stream.Stream;
 /**
  * Call internal osgi services to perform user's approval task related operations.
  */
-public class ApprovalEventService {
+public class SimpleWorkflowEngineApprovalService {
 
     private static final String PENDING = "PENDING";
     private static final String APPROVED = "APPROVED";
@@ -81,7 +81,7 @@ public class ApprovalEventService {
             }
 
             Set<TaskSummaryDTO> taskSummaryDTOs = null;
-            List<TaskSummaryDTO> tasks = listTasksOfApprovers(status);
+            List<TaskSummaryDTO> tasks = listPendingTasks(status);
             int taskListSize = tasks.size();
             for (int i = 0; i < taskListSize; ++i) {
                 taskSummaryDTOs = new HashSet<>(tasks);
@@ -98,35 +98,33 @@ public class ApprovalEventService {
         }
     }
 
-    private List<TaskSummaryDTO> listTasksOfApprovers(List<String> status) {
+    private List<TaskSummaryDTO> listPendingTasks(List<String> status) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-        DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
-        List<String> allRequestsList = getAllRequestRelatedUserAndRole();
+        DefaultWorkflowEventRequestService defaultWorkflowEventRequest = new DefaultWorkflowEventRequestServiceImpl();
+        List<String> allRequestsList = getAllRequestsRelatedUserAndRole();
         List<TaskSummaryDTO> taskSummaryDTOList = new ArrayList<>();
         for (String task : allRequestsList) {
             TaskSummaryDTO summeryDTO = new TaskSummaryDTO();
-            String eventId = getTaskRelatedStatus(task, status);
+            String eventId = getRequestFromStatus(task, status);
             if (eventId != null) {
                 WorkflowRequest request = getWorkflowRequest(eventId);
-                TaskDetails taskDetails = getTaskDetails(request);
-                String eventType = workflowEventRequestDAO.getEventType(request.getUuid());
-                String taskId = defaultWorkflowEventRequest.getApprovalOfRequest(request.getUuid());
-                String taskStatus = workflowEventRequestDAO.getTaskStatusOfRequest(taskId);
+                RequestDetails taskDetails = getRequestDetails(request);
+                String eventType = workflowEventRequestDAO.getEventTypeOfEvent(request.getUuid());
+                String taskId = defaultWorkflowEventRequest.getTaskIDOfEvent(request.getUuid());
+                String taskStatus = workflowEventRequestDAO.getTaskStatusOfTask(taskId);
                 String[] taskStatusValue = taskStatus.split(",", 0);
-                String workflowID = workflowEventRequestDAO.getWorkflowID(taskId);
-                String workflowName = workflowEventRequestDAO.getWorkflowName(workflowID);
                 String entityNameOfRequest = workflowEventRequestDAO.getEntityNameOfRequest(request.getUuid());
                 Timestamp createdTime = workflowEventRequestDAO.getCreatedAtTimeInMill(request.getUuid());
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTimeInMillis(createdTime.getTime());
                 long cal = calendar.getTimeInMillis();
                 setCreatedTime(cal);
-                summeryDTO.setId(taskId.concat(" " + workflowName).concat(WorkflowEngineConstants.ParameterName.
-                        ENTITY_NAME + entityNameOfRequest));
+                summeryDTO.setId(taskId);
                 summeryDTO.setName(WorkflowEngineConstants.ParameterName.APPROVAL_TASK);
                 summeryDTO.setTaskType(eventType);
-                summeryDTO.setPresentationName(taskDetails.getTaskSubject());
+                summeryDTO.setPresentationName(eventType.concat(WorkflowEngineConstants.ParameterName.
+                        ENTITY_NAME + entityNameOfRequest + " ").concat(taskDetails.getTaskSubject()));
                 summeryDTO.setPresentationSubject(taskDetails.getTaskDescription());
                 summeryDTO.setCreatedTimeInMillis(String.valueOf(getCreatedTime()));
                 summeryDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
@@ -137,52 +135,52 @@ public class ApprovalEventService {
         return taskSummaryDTOList;
     }
 
-    private List<String> getAllRequestRelatedUserAndRole() {
+    private List<String> getAllRequestsRelatedUserAndRole() {
 
         String userName = CarbonContext.getThreadLocalCarbonContext().getUsername();
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
         List<String> roleNames = getRoleNamesFromUser(userName);
         List<String> roleRequestsList;
-        List<String> lst = new ArrayList<>();
+        List<String> requestsList = new ArrayList<>();
         for (String roleName : roleNames) {
             String[] names = roleName.split("/", 0);
             String[] newName = roleName.split("_", 0);
             if (names[0].equals(WorkflowEngineConstants.ParameterName.APPLICATION_USER)) {
-                roleRequestsList = workflowEventRequestDAO.getRequestsList(roleName);
-                lst.addAll(roleRequestsList);
+                roleRequestsList = workflowEventRequestDAO.getEventsListOfApprover(roleName);
+                requestsList.addAll(roleRequestsList);
             } else if (newName[0].equals(WorkflowEngineConstants.ParameterName.SYSTEM_USER)) {
                 String newRoleName = WorkflowEngineConstants.ParameterName.SYSTEM_PRIMARY_USER.concat(names[0]);
-                roleRequestsList = workflowEventRequestDAO.getRequestsList(newRoleName);
-                lst.addAll(roleRequestsList);
+                roleRequestsList = workflowEventRequestDAO.getEventsListOfApprover(newRoleName);
+                requestsList.addAll(roleRequestsList);
             } else {
                 String newRoleName = WorkflowEngineConstants.ParameterName.INTERNAL_USER.concat(names[0]);
-                roleRequestsList = workflowEventRequestDAO.getRequestsList(newRoleName);
-                lst.addAll(roleRequestsList);
+                roleRequestsList = workflowEventRequestDAO.getEventsListOfApprover(newRoleName);
+                requestsList.addAll(roleRequestsList);
             }
         }
 
-        List<String> userRequestList = workflowEventRequestDAO.getRequestsList(userName);
-        return Stream.concat(lst.stream(), userRequestList.stream()).collect(Collectors.toList());
+        List<String> userRequestList = workflowEventRequestDAO.getEventsListOfApprover(userName);
+        return Stream.concat(requestsList.stream(), userRequestList.stream()).collect(Collectors.toList());
     }
 
     private List<String> getRoleNamesFromUser(String approverName) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-        List<Integer> roleIDList = workflowEventRequestDAO.getRolesID(approverName);
+        List<Integer> roleIDList = workflowEventRequestDAO.getRolesIDOfUser(approverName);
         List<String> roleNameList;
-        List<String> lst = new ArrayList<>();
+        List<String> rolesList = new ArrayList<>();
         for (Integer roleId : roleIDList) {
-            roleNameList = workflowEventRequestDAO.getRoleNames(roleId);
-            lst.addAll(roleNameList);
+            roleNameList = workflowEventRequestDAO.getRoleNamesOfRoleID(roleId);
+            rolesList.addAll(roleNameList);
         }
-        return new ArrayList<>(lst);
+        return new ArrayList<>(rolesList);
     }
 
-    private String getTaskRelatedStatus(String requestId, List<String> status) {
+    private String getRequestFromStatus(String requestId, List<String> status) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
         TStatus[] tStatuses = getRequiredTStatuses(status);
-        String taskStatus = workflowEventRequestDAO.getStatusOfTask(requestId);
+        String taskStatus = workflowEventRequestDAO.getStatusOfRequest(requestId);
         String[] taskStatusValue = taskStatus.split(",", 0);
         String eventId = null;
         String value;
@@ -209,19 +207,17 @@ public class ApprovalEventService {
     /**
      * Get details of a task identified by the taskId.
      *
-     * @param task the unique ID.
+     * @param taskId the unique ID.
      * @return TaskDataDto object.
      */
-    public TaskDataDTO getTaskData(String task) {
+    public TaskDataDTO getTaskData(String taskId) {
 
         try {
             WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-            String[] taskArray = task.split(" ", 0);
-            String taskId = taskArray[0];
-            String requestId = workflowEventRequestDAO.getRequestID(taskId);
+            String requestId = workflowEventRequestDAO.getRequestIDFromTask(taskId);
             WorkflowRequest request = getWorkflowRequest(requestId);
-            TaskDetails taskDetails = getTaskDetails(request);
-            String initiator = workflowEventRequestDAO.getInitiatedUser(requestId);
+            RequestDetails taskDetails = getRequestDetails(request);
+            String initiator = workflowEventRequestDAO.getInitiatedUserOfRequest(requestId);
             List<String> approvers = workflowEventRequestDAO.listApprovers(taskId);
             Map<String, String> assigneeMap = null;
             for (String assignee : approvers) {
@@ -234,7 +230,7 @@ public class ApprovalEventService {
             taskDataDTO.setId(taskId);
             taskDataDTO.setSubject(taskDetails.getTaskSubject());
             taskDataDTO.setDescription(taskDetails.getTaskDescription());
-            String statusValue = setStatusOfTask(taskId);
+            String statusValue = getStatusOfTasksList(taskId);
             taskDataDTO.setApprovalStatus(TaskDataDTO.ApprovalStatusEnum.valueOf(statusValue));
             taskDataDTO.setInitiator(WorkflowEngineConstants.ParameterName.INITIATED_BY + initiator);
             taskDataDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
@@ -255,10 +251,10 @@ public class ApprovalEventService {
         }
     }
 
-    private String setStatusOfTask(String taskId) {
+    private String getStatusOfTasksList(String taskId) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-        String status = workflowEventRequestDAO.getTaskStatusOfRequest(taskId);
+        String status = workflowEventRequestDAO.getTaskStatusOfTask(taskId);
         String statusValue;
         if (status.equals(String.valueOf(WorkflowEngineConstants.TaskStatus.RESERVED))) {
             statusValue = PENDING;
@@ -283,25 +279,25 @@ public class ApprovalEventService {
     public void updateStatus(String taskId, StateDTO nextState) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-        DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
+        DefaultWorkflowEventRequestService defaultWorkflowEventRequest = new DefaultWorkflowEventRequestServiceImpl();
         validateApprovers(taskId);
         try {
             switch (nextState.getAction()) {
                 case APPROVE:
-                    updateTaskStatusOfRequest(taskId, APPROVED);
+                    updateStatusOfRelevantTask(taskId, APPROVED);
                     updateStepDetailsOfRequest(taskId);
                     break;
                 case REJECT:
-                    String eventId = workflowEventRequestDAO.getRequestID(taskId);
-                    updateTaskStatusOfRequest(taskId, REJECTED);
-                    defaultWorkflowEventRequest.deleteApprovalOfRequest(taskId);
+                    String eventId = workflowEventRequestDAO.getRequestIDFromTask(taskId);
+                    updateStatusOfRelevantTask(taskId, REJECTED);
+                    defaultWorkflowEventRequest.deleteTask(taskId);
                     completeRequest(eventId, REJECTED);
                     break;
                 case RELEASE:
-                    updateTaskStatusOfRequest(taskId, RELEASED);
+                    updateStatusOfRelevantTask(taskId, RELEASED);
                     break;
                 case CLAIM:
-                    updateTaskStatusOfRequest(taskId, CLAIMED);
+                    updateStatusOfRelevantTask(taskId, CLAIMED);
                     break;
                 default:
                     throw new WorkflowEngineClientException(
@@ -340,39 +336,39 @@ public class ApprovalEventService {
     private void updateStepDetailsOfRequest(String taskId) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-        String eventId = workflowEventRequestDAO.getRequestID(taskId);
-        WorkflowRequest request = getWorkflowRequest(eventId);
-        DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
+        String requestID = workflowEventRequestDAO.getRequestIDFromTask(taskId);
+        WorkflowRequest request = getWorkflowRequest(requestID);
+        DefaultWorkflowEventRequestService defaultWorkflowEventRequest = new DefaultWorkflowEventRequestServiceImpl();
         List<Parameter> parameterList = getParameterList(request);
         String workflowId = defaultWorkflowEventRequest.getWorkflowId(request);
-        defaultWorkflowEventRequest.deleteApprovalOfRequest(taskId);
-        int stepValue = defaultWorkflowEventRequest.getStateOfRequest(eventId, workflowId);
-        if (stepValue < numOfStates(request)) {
-            defaultWorkflowEventRequest.addApproversOfRequests(request, parameterList);
+        defaultWorkflowEventRequest.deleteTask(taskId);
+        int stepValue = defaultWorkflowEventRequest.getCurrentStepOfEvent(requestID, workflowId);
+        if (stepValue < numOfStatesOfRequest(request)) {
+            defaultWorkflowEventRequest.addParamDetailsOfEvent(request, parameterList);
         } else {
-            completeRequest(eventId, ApprovalEventService.APPROVED);
+            completeRequest(requestID, SimpleWorkflowEngineApprovalService.APPROVED);
         }
     }
 
     private void validateApprovers(String taskId) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-        List<String> eventList = getAllRequestRelatedUserAndRole();
+        List<String> eventList = getAllRequestsRelatedUserAndRole();
         List<String> taskList;
-        List<String> lst = new ArrayList<>();
+        List<String> tasks = new ArrayList<>();
         for (String event : eventList) {
             taskList = workflowEventRequestDAO.getTaskId(event);
-            lst.addAll(taskList);
+            tasks.addAll(taskList);
         }
 
-        for (String task : lst) {
+        for (String task : tasks) {
             if (taskId.equals(task)) {
                 return;
             }
         }
     }
 
-    private int numOfStates(WorkflowRequest request) {
+    private int numOfStatesOfRequest(WorkflowRequest request) {
 
         List<Parameter> parameterList = getParameterList(request);
         int count = 0;
@@ -385,7 +381,7 @@ public class ApprovalEventService {
         return count;
     }
 
-    private void updateTaskStatusOfRequest(String taskId, String status) {
+    private void updateStatusOfRelevantTask(String taskId, String status) {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
         try {
@@ -409,7 +405,7 @@ public class ApprovalEventService {
                             WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.
                                     getDescription());
             }
-            workflowEventRequestDAO.updateStatusOfRequest(taskId, status);
+            workflowEventRequestDAO.updateStatusOfTask(taskId, status);
         } catch (WorkflowEngineClientException e) {
             throw new WorkflowEngineClientException(
                     WorkflowEngineConstants.ErrorMessages.USER_ERROR_NON_EXISTING_TASK_ID.getCode(),
@@ -422,23 +418,23 @@ public class ApprovalEventService {
         }
     }
 
-    private void completeRequest(String eventId, String status) {
+    private void completeRequest(String requestId, String status) {
 
         WSWorkflowResponse wsWorkflowResponse = new WSWorkflowResponse();
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
-        DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
-        String relationshipId = workflowEventRequestDAO.getRelationshipId(eventId);
+        DefaultWorkflowEventRequestService defaultWorkflowEventRequest = new DefaultWorkflowEventRequestServiceImpl();
+        String relationshipId = workflowEventRequestDAO.getRelationshipId(requestId);
         wsWorkflowResponse.setUuid(relationshipId);
         wsWorkflowResponse.setStatus(status);
         WSWorkflowCallBackService wsWorkflowCallBackService = new WSWorkflowCallBackService();
         wsWorkflowCallBackService.onCallback(wsWorkflowResponse);
-        defaultWorkflowEventRequest.deleteStateOfRequest(eventId);
+        defaultWorkflowEventRequest.deleteCurrentStepOfEvent(requestId);
     }
 
-    private TaskDetails getTaskDetails(WorkflowRequest workflowRequest) {
+    private RequestDetails getRequestDetails(WorkflowRequest workflowRequest) {
 
         List<Parameter> parameterList = getParameterList(workflowRequest);
-        TaskDetails taskDetails = new TaskDetails();
+        RequestDetails taskDetails = new RequestDetails();
         for (Parameter parameter : parameterList) {
             if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.TASK_SUBJECT)) {
                 taskDetails.setTaskSubject(parameter.getParamValue());
@@ -453,7 +449,7 @@ public class ApprovalEventService {
     private List<Parameter> getParameterList(WorkflowRequest request) {
 
         WorkflowManagementService workflowManagementService = new WorkflowManagementServiceImpl();
-        DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
+        DefaultWorkflowEventRequestService defaultWorkflowEventRequest = new DefaultWorkflowEventRequestServiceImpl();
         List<WorkflowAssociation> associations = defaultWorkflowEventRequest.getAssociations(request);
         List<Parameter> parameterList = null;
         for (WorkflowAssociation association : associations) {

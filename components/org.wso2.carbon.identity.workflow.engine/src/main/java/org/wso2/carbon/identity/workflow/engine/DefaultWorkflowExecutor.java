@@ -38,8 +38,8 @@ public class DefaultWorkflowExecutor implements WorkFlowExecutor {
     @Override
     public void execute(WorkflowRequest request) {
 
-        DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
-        defaultWorkflowEventRequest.addApproversOfRequests(request, parameterList);
+        DefaultWorkflowEventRequestService defaultWorkflowEventRequest = new DefaultWorkflowEventRequestServiceImpl();
+        defaultWorkflowEventRequest.addParamDetailsOfEvent(request, parameterList);
     }
 
     /**

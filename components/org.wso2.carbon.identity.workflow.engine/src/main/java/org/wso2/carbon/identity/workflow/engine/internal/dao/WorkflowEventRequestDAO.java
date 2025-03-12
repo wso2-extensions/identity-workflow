@@ -9,7 +9,8 @@ import java.util.List;
 public interface WorkflowEventRequestDAO {
 
     /**
-     * Add who approves the relevant request.
+     * Add who approves the relevant request with unique task ID, event ID, workflow ID, approverType, approverName and
+     * taskStatus.
      *
      * @param taskId       random generated unique Id.
      * @param eventId      the request ID that need to be checked.
@@ -18,7 +19,8 @@ public interface WorkflowEventRequestDAO {
      * @param approverName the value of the approver type.
      * @param taskStatus   state of the tasks [RESERVED, READY or COMPLETED].
      */
-    void addApproversOfRequest(String taskId, String eventId, String workflowId, String approverType, String approverName, String taskStatus);
+    void addApproverDetailsOfEvent(String taskId, String eventId, String workflowId, String approverType,
+                                   String approverName, String taskStatus);
 
     /**
      * Get taskId from table.
@@ -26,14 +28,14 @@ public interface WorkflowEventRequestDAO {
      * @param eventId the request ID that need to be checked.
      * @return task Id.
      */
-    String getApproversOfRequest(String eventId);
+    String getTaskIDOfEvent(String eventId);
 
     /**
      * Delete approver details using task Id.
      *
      * @param taskId random generated unique Id.
      */
-    void deleteApproversOfRequest(String taskId);
+    void deleteApproversOfTask(String taskId);
 
     /**
      * Add what step to approve.
@@ -42,7 +44,7 @@ public interface WorkflowEventRequestDAO {
      * @param workflowId  workflow ID.
      * @param currentStep the current step.
      */
-    void createStatesOfRequest(String eventId, String workflowId, int currentStep);
+    void createCurrentStepOfEvent(String eventId, String workflowId, int currentStep);
 
     /**
      * Returns the current step given the event ID and workflow ID.
@@ -51,7 +53,7 @@ public interface WorkflowEventRequestDAO {
      * @param workflowId workflow ID.
      * @return current step value.
      */
-    int getStateOfRequest(String eventId, String workflowId);
+    int getCurrentStepOfEvent(String eventId, String workflowId);
 
     /**
      * Updates a state of request given the event ID, workflow ID and current step.
@@ -60,7 +62,7 @@ public interface WorkflowEventRequestDAO {
      * @param workflowId  workflow ID.
      * @param currentStep the current step.
      */
-    void updateStateOfRequest(String eventId, String workflowId, int currentStep);
+    void updateCurrentStepOfEvent(String eventId, String workflowId, int currentStep);
 
     /**
      * Returns the request ID given the task ID.
@@ -68,7 +70,7 @@ public interface WorkflowEventRequestDAO {
      * @param taskId random generated unique Id.
      * @return request Id.
      */
-    String getRequestID(String taskId);
+    String getRequestIDFromTask(String taskId);
 
     /**
      * Returns the initiator given the request ID.
@@ -76,7 +78,7 @@ public interface WorkflowEventRequestDAO {
      * @param requestId the request ID that need to be checked.
      * @return string initiator.
      */
-    String getInitiatedUser(String requestId);
+    String getInitiatedUserOfRequest(String requestId);
 
     /**
      * Retrieve the role id list giving the username.
@@ -84,7 +86,7 @@ public interface WorkflowEventRequestDAO {
      * @param userName the username that need to be checked.
      * @return role ID list.
      */
-    List<Integer> getRolesID(String userName);
+    List<Integer> getRolesIDOfUser(String userName);
 
     /**
      * Get the role name giving the role ID.
@@ -92,7 +94,7 @@ public interface WorkflowEventRequestDAO {
      * @param roleId the roleID that need to be checked.
      * @return role name list.
      */
-    List<String> getRoleNames(int roleId);
+    List<String> getRoleNamesOfRoleID(int roleId);
 
     /**
      * Returns the events list according to the user.
@@ -100,15 +102,15 @@ public interface WorkflowEventRequestDAO {
      * @param approverName admin user.
      * @return events list.
      */
-    List<String> getRequestsList(String approverName);
+    List<String> getEventsListOfApprover(String approverName);
 
     /**
      * Returns the event type given the request ID.
      *
-     * @param requestId the request ID that need to be checked.
+     * @param eventId the request ID that need to be checked.
      * @return event type of the request.
      */
-    String getEventType(String requestId);
+    String getEventTypeOfEvent(String eventId);
 
     /**
      * Returns the task status given the task ID [RESERVED, READY or COMPLETED].
@@ -116,7 +118,7 @@ public interface WorkflowEventRequestDAO {
      * @param taskId the task ID that need to be checked.
      * @return task Status.
      */
-    String getTaskStatusOfRequest(String taskId);
+    String getTaskStatusOfTask(String taskId);
 
     /**
      * Update the task status given the task ID.
@@ -124,7 +126,7 @@ public interface WorkflowEventRequestDAO {
      * @param taskId the task ID that need to be checked.
      * @param taskStatus state of the tasks [RESERVED, READY or COMPLETED].
      */
-    void updateStatusOfRequest(String taskId, String taskStatus);
+    void updateStatusOfTask(String taskId, String taskStatus);
 
     /**
      * Returns the created time of the request.
@@ -137,13 +139,13 @@ public interface WorkflowEventRequestDAO {
     /**
      * Returns the relationship ID given the request ID.
      *
-     * @param eventId the event ID that need to be checked.
+     * @param requestId the event ID that need to be checked.
      * @return the relationship ID.
      */
-    String getRelationshipId(String eventId);
+    String getRelationshipId(String requestId);
 
     /**
-     * Returns the approvers list given the authenticated approver name.
+     * Returns the approvers list given the taskId.
      *
      * @param taskId the task ID that need to be checked.
      * @return approvers list.
@@ -156,7 +158,7 @@ public interface WorkflowEventRequestDAO {
      * @param requestId the request ID that need to be checked.
      * @return task status.
      */
-    String getStatusOfTask(String requestId);
+    String getStatusOfRequest(String requestId);
 
     /**
      * Retrieve the tasks list giving event ID.
@@ -196,4 +198,12 @@ public interface WorkflowEventRequestDAO {
      * @return entity name of the request
      */
     String getEntityNameOfRequest(String requestID);
+
+    /**
+     * Retrieve the task giving taskID.
+     *
+     * @param taskId the task ID that need to be checked.
+     * @return task.
+     */
+    String getTask(String taskId);
 }

@@ -1,0 +1,7 @@
+ "workflow_engines.simple_workflow_engine.enable_simple_workflow_engine":true,
+  "workflow_engines.simple_workflow_engine.allow_creating_new_definitions":true,
+  "workflow_engines.simple_workflow_engine.engage_new_workflow":true,
+  "workflow_engines.simple_workflow_engine.enable_approvals":true,
+  "workflow_engines.bpel_workflow_engine.allow_creating_new_definitions":false,
+  "workflow_engines.bpel_workflow_engine.engage_new_workflow":false,
+  "workflow_engines.bpel_workflow_engine.enable_approvals":false,

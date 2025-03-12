@@ -7,7 +7,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.wso2.carbon.identity.workflow.engine.ApprovalEventService;
+import org.wso2.carbon.identity.workflow.engine.SimpleWorkflowEngineApprovalService;
 import org.wso2.carbon.identity.workflow.engine.DefaultApprovalWorkflow;
 import org.wso2.carbon.identity.workflow.engine.DefaultTemplateInitializer;
 import org.wso2.carbon.identity.workflow.engine.DefaultWorkflowExecutor;
@@ -35,8 +35,8 @@ public class WorkflowEngineServiceComponent {
         BundleContext bundleContext = context.getBundleContext();
         bundleContext.registerService(AbstractWorkflow.class, new DefaultApprovalWorkflow(DefaultTemplateInitializer.class,
                 DefaultWorkflowExecutor.class, getMetaDataXML()), null);
-        ApprovalEventService approvalEventService=new ApprovalEventService();
-        bundleContext.registerService(ApprovalEventService.class, approvalEventService, null);
+        SimpleWorkflowEngineApprovalService approvalEventService=new SimpleWorkflowEngineApprovalService();
+        bundleContext.registerService(SimpleWorkflowEngineApprovalService.class, approvalEventService, null);
     }
 
     private String getMetaDataXML() {
