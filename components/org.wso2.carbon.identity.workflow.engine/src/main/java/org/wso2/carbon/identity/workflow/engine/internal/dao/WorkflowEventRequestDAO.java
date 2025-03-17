@@ -1,5 +1,7 @@
 package org.wso2.carbon.identity.workflow.engine.internal.dao;
 
+import org.wso2.carbon.identity.workflow.engine.model.TStatus;
+
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -110,6 +112,17 @@ public interface WorkflowEventRequestDAO {
      * @return events list.
      */
     List<String> getRequestsList(String approverType, String approverName);
+
+    /**
+     * Returns the events list filtered by user, type and status
+     *
+     * @param approverType entity type.
+     * @param approverType entity value.
+     * @param status request status
+     * @return events list.
+     */
+    List<String> getRequestsListByStatus(String approverType, String approverName, String status);
+
 
     /**
      * Returns the event type given the request ID.
