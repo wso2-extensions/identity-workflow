@@ -104,13 +104,13 @@ public class ApprovalEventService {
 
         WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
         DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
-        List<String> allRequestsList = getAllRequestRelatedUserAndRole();
+        List<String> allRequestsList = getAllRequestRelatedUserAndRole(status);
         List<TaskSummaryDTO> taskSummaryDTOList = new ArrayList<>();
         for (String task : allRequestsList) {
             TaskSummaryDTO summeryDTO = new TaskSummaryDTO();
-            String eventId = getTaskRelatedStatus(task, status);
-            if (eventId != null) {
-                WorkflowRequest request = getWorkflowRequest(eventId);
+            //String eventId = getTaskRelatedStatus(task, status);
+            if (task != null) {
+                WorkflowRequest request = getWorkflowRequest(task);
                 TaskDetails taskDetails = getTaskDetails(request);
                 String eventType = workflowEventRequestDAO.getEventType(request.getUuid());
                 String taskId = defaultWorkflowEventRequest.getApprovalOfRequest(request.getUuid());
@@ -147,32 +147,44 @@ public class ApprovalEventService {
         List<String> roleRequestsList;
         List<String> lst = new ArrayList<>();
         for (String roleName : roleNames) {
-            String[] names = roleName.split("/", 0);
-            String[] newName = roleName.split("_", 0);
-            if (names[0].equals(WorkflowEngineConstants.ParameterName.APPLICATION_USER)) {
+            roleRequestsList = workflowEventRequestDAO.getRequestsList(
+                    WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, roleName);
+            lst.addAll(roleRequestsList);
+        }
+        List<String> userRequestList = workflowEventRequestDAO.getRequestsList(
+                WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS,userName);
+
+        return Stream.concat(lst.stream(), userRequestList.stream()).collect(Collectors.toList());
+    }
+
+    private List<String> getAllRequestRelatedUserAndRole(List<String> status) {
+
+        String userName = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
+        String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
+        List<String> roleNames = getRoleNamesFromUser(userId);
+        List<String> roleRequestsList;
+        List<String> lst = new ArrayList<>();
+        for (String roleName : roleNames) {
+            if (status.isEmpty()) {
                 roleRequestsList = workflowEventRequestDAO.getRequestsList(
                         WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, roleName);
-                lst.addAll(roleRequestsList);
-            } else if (newName[0].equals(WorkflowEngineConstants.ParameterName.SYSTEM_USER)) {
-                String newRoleName = WorkflowEngineConstants.ParameterName.SYSTEM_PRIMARY_USER.concat(names[0]);
-                roleRequestsList = workflowEventRequestDAO.getRequestsList(
-                        WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, newRoleName);
-                lst.addAll(roleRequestsList);
-            } else if (newName[0].equals(WorkflowEngineConstants.ParameterName.INTERNAL_USER)){
-                String newRoleName = WorkflowEngineConstants.ParameterName.INTERNAL_USER.concat(names[0]);
-                roleRequestsList = workflowEventRequestDAO.getRequestsList(
-                        WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, newRoleName);
-                lst.addAll(roleRequestsList);
             } else {
-                String newRoleName = names[0];
-                roleRequestsList = workflowEventRequestDAO.getRequestsList(
-                        WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, newRoleName);
-                lst.addAll(roleRequestsList);
+                roleRequestsList = workflowEventRequestDAO.getRequestsListByStatus(
+                        WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, roleName, status.get(0));
             }
+
+                lst.addAll(roleRequestsList);
+        }
+        List<String> userRequestList;
+        if (status.isEmpty()) {
+            userRequestList = workflowEventRequestDAO.getRequestsList(
+                    WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS,userName);
+        } else {
+            userRequestList = workflowEventRequestDAO.getRequestsListByStatus(
+                    WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS,userName, status.get(0));
         }
 
-        List<String> userRequestList = workflowEventRequestDAO.getRequestsList(userName,
-                WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS);
         return Stream.concat(lst.stream(), userRequestList.stream()).collect(Collectors.toList());
     }
 
