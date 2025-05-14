@@ -8,6 +8,7 @@ public class WorkflowEngineConstants {
     public static final String CURRENT_STEP_COLUMN = "CURRENT_STEP";
     public static final String TASK_ID_COLUMN = "TASK_ID";
     public static final String APPROVER_NAME_COLUMN = "APPROVER_NAME";
+    public static final String APPROVER_TYPE_COLUMN = "APPROVER_TYPE";
     public static final String EVENT_ID = "EVENT_ID";
     public static final String WORKFLOW_ID = "WORKFLOW_ID";
     public static final String WORKFLOW_NAME = "WF_NAME";
@@ -19,6 +20,9 @@ public class WorkflowEngineConstants {
     public static final String RELATIONSHIP_ID_IN_REQUEST_COLUMN = "RELATIONSHIP_ID";
     public static final String ROLE_ID_COLUMN = "UM_ROLE_ID";
     public static final String ROLE_NAME = "UM_ROLE_NAME";
+    public static final String WORKFLOW_ASSOCIATION_NAME = "ASSOC_NAME";
+    public static final String APPROVER_TYPE_USERS = "users";
+    public static final String APPROVER_TYPE_ROLES = "roles";
 
     /**
      * SQL Query definitions.
@@ -33,6 +37,8 @@ public class WorkflowEngineConstants {
         public static final String UPDATE_STATE_OF_REQUEST = "UPDATE WF_WORKFLOW_APPROVAL_STATE SET CURRENT_STEP=? WHERE EVENT_ID = ? AND WORKFLOW_ID = ?";
         public static final String DELETE_CURRENT_STEP_OF_REQUEST = "DELETE FROM WF_WORKFLOW_APPROVAL_STATE WHERE EVENT_ID=?";
         public static final String GET_APPROVER_NAME_RELATED_TO_CURRENT_TASK_ID = "SELECT DISTINCT APPROVER_NAME FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
+        public static final String GET_APPROVER_TYPE_RELATED_TO_CURRENT_TASK_ID = "SELECT APPROVER_TYPE FROM" +
+                " WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String GET_WORKFLOW_ID = "SELECT DISTINCT WORKFLOW_ID FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String UPDATE_TASK_STATUS = "UPDATE WF_WORKFLOW_APPROVAL_RELATION SET TASK_STATUS=? WHERE TASK_ID=?";
         public static final String GET_REQUEST_ID = "SELECT DISTINCT EVENT_ID FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
@@ -41,6 +47,12 @@ public class WorkflowEngineConstants {
         public static final String GET_REQUEST_ID_FROM_APPROVER = "SELECT EVENT_ID FROM WF_WORKFLOW_APPROVAL_RELATION WHERE APPROVER_NAME= ?";
         public static final String GET_REQUEST_ID_FROM_APPROVER_AND_TYPE = "SELECT EVENT_ID FROM " +
                 "WF_WORKFLOW_APPROVAL_RELATION WHERE APPROVER_NAME= ? AND APPROVER_TYPE= ?";
+        public static final String GET_TASK_ID_FROM_APPROVER_AND_TYPE =
+                "SELECT TASK_ID FROM WF_WORKFLOW_APPROVAL_RELATION " +
+                        "WHERE APPROVER_NAME = ? AND APPROVER_TYPE = ?";
+        public static final String GET_TASK_ID_FROM_APPROVER_AND_TYPE_BY_STATUS =
+                "SELECT TASK_ID FROM WF_WORKFLOW_APPROVAL_RELATION " +
+                        "WHERE APPROVER_NAME = ? AND APPROVER_TYPE = ? AND TASK_STATUS = ?";
         public static final String GET_REQUEST_ID_FROM_APPROVER_AND_TYPE_BY_STATUS = "SELECT EVENT_ID FROM " +
                 "WF_WORKFLOW_APPROVAL_RELATION WHERE APPROVER_NAME= ? AND APPROVER_TYPE= ? AND TASK_STATUS= ?";
         public static final String GET_TASK_STATUS = "SELECT DISTINCT TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
@@ -53,12 +65,15 @@ public class WorkflowEngineConstants {
         public static final String GET_WORKFLOW_NAME = "SELECT WF_NAME FROM WF_WORKFLOW WHERE ID =? ";
         public static final String GET_ROLE_ID = "SELECT UM_ROLE_ID FROM UM_HYBRID_USER_ROLE WHERE UM_USER_NAME=?";
         public static final String GET_ROLE_NAME = "SELECT UM_ROLE_NAME FROM UM_HYBRID_ROLE WHERE UM_ID=?";
+        public static final String GET_WORKFLOW_ASSOCIATION_NAME = "SELECT ASSOC_NAME FROM WF_WORKFLOW_ASSOCIATION " +
+                "WHERE WORKFLOW_ID = ? AND EVENT_ID = ?";
     }
 
     public static class ParameterName {
 
         public static final String USER_AND_ROLE_STEP = "ApprovalSteps";
         public static final String TASK_STATUS_DEFAULT = "RESERVED";
+        public static final String TASK_STATUS_READY = "READY";
         public static final String REQUEST_ID = "REQUEST ID";
         public static final String TASK_SUBJECT = "ApprovalTaskSubject";
         public static final String TASK_DESCRIPTION = "ApprovalTaskDescription";
@@ -75,13 +90,14 @@ public class WorkflowEngineConstants {
         public static final String ENTITY_NAME = " User_Name:";
         public static final String ENTITY_TYPE_ROLES = "roles";
         public static final String ENTITY_TYPE_USERS = "users";
-
+        public static final String ENTITY_TYPE_CLAIMED_USERS = "claimedUsers";
     }
 
     public enum TaskStatus {
         READY,
         RESERVED,
-        COMPLETED;
+        COMPLETED,
+        BLOCKED;
 
         TaskStatus() {
 
