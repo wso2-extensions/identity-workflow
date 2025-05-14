@@ -16,7 +16,7 @@ public class TaskSummaryDTO {
     private String taskType = null;
 
     public enum StatusEnum {
-        READY, RESERVED, COMPLETED,
+        READY, RESERVED, COMPLETED, BLOCKED
     }
 
     private StatusEnum status = null;
