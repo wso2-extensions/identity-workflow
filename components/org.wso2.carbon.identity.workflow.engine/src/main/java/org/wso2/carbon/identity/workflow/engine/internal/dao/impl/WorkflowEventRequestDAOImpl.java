@@ -210,6 +210,30 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
+    public String getApproverType(String taskId) {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        String approverType;
+        try {
+            approverType = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
+                            GET_APPROVER_TYPE_RELATED_TO_CURRENT_TASK_ID,
+                    ((resultSet, i) -> (
+                            resultSet.getString(WorkflowEngineConstants.APPROVER_TYPE_COLUMN))),
+                    preparedStatement -> preparedStatement.setString(1, taskId));
+        } catch (DataAccessException e) {
+            String errorMessage = "Error occurred while retrieving approver type";
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+        return approverType;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public List<Integer> getRolesID(String userName) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
@@ -345,6 +369,59 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
                     });
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving request id from" +
+                    "approver name: %s" + " of approver type: %s", approverName, approverType);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+        return requestIdList;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public List<String> getTaskIDList(String approverType, String approverName) {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        List<String> requestIdList;
+        try {
+            requestIdList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
+                            GET_TASK_ID_FROM_APPROVER_AND_TYPE, (resultSet, rowNumber) ->
+                            resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN),
+                    preparedStatement -> {
+                        preparedStatement.setString(1, approverName);
+                        preparedStatement.setString(2, approverType);
+                    });
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error occurred while retrieving task id from" +
+                    "approver name: %s" + " of approver type: %s", approverName, approverType);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+        return requestIdList;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public List<String> getTaskIDListByStatus(String approverType, String approverName, String status) {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        List<String> requestIdList;
+        try {
+            requestIdList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
+                            GET_TASK_ID_FROM_APPROVER_AND_TYPE_BY_STATUS, (resultSet, rowNumber) ->
+                            resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN),
+                    preparedStatement -> {
+                        preparedStatement.setString(1, approverName);
+                        preparedStatement.setString(2, approverType);
+                        preparedStatement.setString(3, status);
+                    });
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error occurred while retrieving task id from" +
                     "approver name: %s" + " of approver type: %s", approverName, approverType);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
@@ -654,4 +731,33 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
         }
         return taskStatus;
     }
+
+    @Override
+    public String getAssociationName(String workflowID, String eventType) {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        String taskStatus;
+        try {
+            taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
+                            GET_WORKFLOW_ASSOCIATION_NAME,
+                    ((resultSet, i) -> (
+                            resultSet.getString(WorkflowEngineConstants.WORKFLOW_ASSOCIATION_NAME))),
+                    preparedStatement -> {
+                        preparedStatement.setString(1, workflowID);
+                        preparedStatement.setString(2, eventType);
+                    });
+        } catch (DataAccessException e) {
+            String errorMessage = String.format(
+                    "Error occurred while retrieving workflow association name from workflowId: %s and eventType: %s",
+                    workflowID, eventType
+            );
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+        return taskStatus;
+    }
+
+
 }
