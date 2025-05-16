@@ -112,7 +112,6 @@
                                  !org.wso2.carbon.identity.workflow.engine.internal,
                                  org.wso2.carbon.identity.workflow.engine.*;
                              </Export-Package>
-
                          </instructions>
                      </configuration>
                  </plugin>
