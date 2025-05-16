@@ -45,7 +45,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
-            throw new WorkflowEngineServerException(errorMessage,e);
+            throw new WorkflowEngineServerException(errorMessage, e);
         }
     }
 

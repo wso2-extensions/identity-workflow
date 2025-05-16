@@ -73,7 +73,8 @@ public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventR
                                 if (approverType.equals(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES)) {
                                     try {
                                         List<UserBasicInfo> userListOfRole =
-                                                WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().getUserListOfRole(name, tenantDomain);
+                                                WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService()
+                                                        .getUserListOfRole(name, tenantDomain);
                                         if (userListOfRole.size() == 1) {
                                             taskStatus = WorkflowEngineConstants.ParameterName.TASK_STATUS_DEFAULT;
                                         } else {

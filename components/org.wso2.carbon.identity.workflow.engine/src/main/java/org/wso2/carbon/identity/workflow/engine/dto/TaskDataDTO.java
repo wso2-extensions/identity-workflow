@@ -20,6 +20,9 @@ public class TaskDataDTO {
 
     private String createdTimeInMillis = null;
 
+    /**
+     * Represents the various statuses of an approval request.
+     */
     public enum ApprovalStatusEnum {
         PENDING, APPROVED, REJECTED,
     }
@@ -121,7 +124,8 @@ public class TaskDataDTO {
     }
 
     /**
-     * Set available only for the completed Tasks, APPROVED or REJECTED if the task has been completed, PENDING otherwise\n
+     * Set available only for the completed Tasks, APPROVED or REJECTED if the task has been completed, PENDING
+     * otherwise
      **/
     public void setApprovalStatus(ApprovalStatusEnum approvalStatus) {
 
@@ -129,7 +133,8 @@ public class TaskDataDTO {
     }
 
     /**
-     * To whom the task is assigned:\n  * user - username(s) if the task is reserved for specific user(s).\n  * group - role name(s) if the task is assignable for group(s).\n
+     * To whom the task is assigned:\n  * user - username(s) if the task is reserved for specific user(s).\n
+     * * group - role name(s) if the task is assignable for group(s).\n
      **/
     public List<PropertyDTO> getAssignees() {
 

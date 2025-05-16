@@ -33,9 +33,10 @@ public class WorkflowEngineServiceComponent {
     protected void activate(ComponentContext context) {
 
         BundleContext bundleContext = context.getBundleContext();
-        bundleContext.registerService(AbstractWorkflow.class, new DefaultApprovalWorkflow(DefaultTemplateInitializer.class,
+        bundleContext.registerService(AbstractWorkflow.class,
+                new DefaultApprovalWorkflow(DefaultTemplateInitializer.class,
                 DefaultWorkflowExecutor.class, getMetaDataXML()), null);
-        ApprovalEventService approvalEventService=new ApprovalEventService();
+        ApprovalEventService approvalEventService = new ApprovalEventService();
         bundleContext.registerService(ApprovalEventService.class, approvalEventService, null);
     }
 
@@ -48,7 +49,8 @@ public class WorkflowEngineServiceComponent {
                 "    <met:WorkflowImplDescription>Simple WorkflowEngine</met:WorkflowImplDescription>\n" +
                 "    <met:TemplateId>MultiStepApprovalTemplate</met:TemplateId>\n" +
                 "    <met:ParametersMetaData>\n" +
-                "        <met:ParameterMetaData Name=\"HTSubject\" DataType=\"String\" InputType=\"Text\" isRequired=\"true\">\n" +
+                "        <met:ParameterMetaData Name=\"HTSubject\" DataType=\"String\" InputType=\"Text\" " +
+                "               isRequired=\"true\">\n" +
                 "            <met:DisplayName> Subject(Approval task subject to display)</met:DisplayName>\n" +
                 "        </met:ParameterMetaData>\n" +
                 "        <met:ParameterMetaData Name=\"HTDescription\" DataType=\"String\" InputType=\"TextArea\">\n" +

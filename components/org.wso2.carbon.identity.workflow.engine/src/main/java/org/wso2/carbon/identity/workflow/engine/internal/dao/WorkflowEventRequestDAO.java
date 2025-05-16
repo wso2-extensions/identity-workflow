@@ -1,7 +1,5 @@
 package org.wso2.carbon.identity.workflow.engine.internal.dao;
 
-import org.wso2.carbon.identity.workflow.engine.model.TStatus;
-
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -20,7 +18,8 @@ public interface WorkflowEventRequestDAO {
      * @param approverName the value of the approver type.
      * @param taskStatus   state of the tasks [RESERVED, READY or COMPLETED].
      */
-    void addApproversOfRequest(String taskId, String eventId, String workflowId, String approverType, String approverName, String taskStatus);
+    void addApproversOfRequest(String taskId, String eventId, String workflowId, String approverType,
+                               String approverName, String taskStatus);
 
     /**
      * Get taskId from table.
@@ -108,7 +107,7 @@ public interface WorkflowEventRequestDAO {
      * Returns the events list according to the user and type.
      *
      * @param approverType entity type.
-     * @param approverType entity value.
+     * @param approverName entity value.
      * @return events list.
      */
     List<String> getRequestsList(String approverType, String approverName);
@@ -117,7 +116,7 @@ public interface WorkflowEventRequestDAO {
      * Returns the task id list according to the user and type.
      *
      * @param approverType entity type.
-     * @param approverType entity value.
+     * @param approverName entity value.
      * @return events list.
      */
     List<String> getTaskIDList(String approverType, String approverName);
@@ -126,7 +125,7 @@ public interface WorkflowEventRequestDAO {
      * Returns the task id list according to the user, type and status.
      *
      * @param approverType entity type.
-     * @param approverType entity value.
+     * @param approverName entity value.
      * @param status request status
      * @return events list.
      */
@@ -137,7 +136,7 @@ public interface WorkflowEventRequestDAO {
      * Returns the events list filtered by user, type and status
      *
      * @param approverType entity type.
-     * @param approverType entity value.
+     * @param approverName entity value.
      * @param status request status
      * @return events list.
      */

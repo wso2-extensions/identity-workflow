@@ -1,9 +1,9 @@
 package org.wso2.carbon.identity.workflow.engine.internal;
 
 import org.osgi.framework.BundleContext;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.workflow.AbstractWorkflow;
-import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,11 +55,12 @@ public class WorkflowEngineServiceDataHolder {
         return roleManagementService;
     }
 
-    public void setRoleManagementService(RoleManagementService roleManagementService){
+    public void setRoleManagementService(RoleManagementService roleManagementService) {
         this.roleManagementService = roleManagementService;
     }
 
-    private Map<String, Map<String, AbstractWorkflow>> workflowImpls = new HashMap<String, Map<String, AbstractWorkflow>>();
+    private Map<String, Map<String, AbstractWorkflow>> workflowImpls
+            = new HashMap<String, Map<String, AbstractWorkflow>>();
 
     public Map<String, Map<String, AbstractWorkflow>> getWorkflowImpls() {
 

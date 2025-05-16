@@ -5,6 +5,9 @@ package org.wso2.carbon.identity.workflow.engine.dto;
  */
 public class StateDTO {
 
+    /**
+     * Actions to perform on an approval task.
+     */
     public enum ActionEnum {
         CLAIM, RELEASE, APPROVE, REJECT,
     };

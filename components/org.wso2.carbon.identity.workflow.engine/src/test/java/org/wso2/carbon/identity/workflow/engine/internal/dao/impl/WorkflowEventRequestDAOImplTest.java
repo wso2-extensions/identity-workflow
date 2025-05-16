@@ -12,14 +12,15 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.workflow.engine.util.TestUtils;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowEventRequestDAO;
+import org.wso2.carbon.identity.workflow.engine.util.TestUtils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.sql.DataSource;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -78,7 +79,8 @@ public class WorkflowEventRequestDAOImplTest extends PowerMockTestCase {
                 Connection spyConnection = TestUtils.spyConnection(connection);
                 when(dataSource.getConnection()).thenReturn(spyConnection);
                 try {
-                    workflowEventRequestDAO.addApproversOfRequest(taskId, eventId, workflowId, approverType, approverName, taskStatus);
+                    workflowEventRequestDAO.addApproversOfRequest(taskId, eventId, workflowId, approverType,
+                            approverName, taskStatus);
                     String task = workflowEventRequestDAO.getApproversOfRequest(eventId);
                     assertNotNull(task);
                     Assert.assertEquals(workflowEventRequestDAO.getWorkflowID(taskId), workflowId);

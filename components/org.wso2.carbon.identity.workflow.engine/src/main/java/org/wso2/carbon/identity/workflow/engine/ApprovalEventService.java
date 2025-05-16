@@ -30,11 +30,17 @@ import org.wso2.carbon.identity.workflow.mgt.dao.WorkflowRequestDAO;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
 import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
-import org.wso2.carbon.identity.workflow.mgt.util.SQLConstants;
-import org.wso2.carbon.utils.UserUtils.*;
 
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -171,7 +177,7 @@ public class ApprovalEventService {
             lst.addAll(roleRequestsList);
         }
         List<String> userRequestList = workflowEventRequestDAO.getRequestsList(
-                WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS,userId);
+                WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS, userId);
 
         return Stream.concat(lst.stream(), userRequestList.stream()).collect(Collectors.toList());
     }
@@ -198,10 +204,10 @@ public class ApprovalEventService {
         List<String> userRequestList;
         if (status.isEmpty()) {
             userRequestList = workflowEventRequestDAO.getRequestsList(
-                    WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS,userName);
+                    WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS, userName);
         } else {
             userRequestList = workflowEventRequestDAO.getRequestsListByStatus(
-                    WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS,userName, status.get(0));
+                    WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS, userName, status.get(0));
         }
 
         return Stream.concat(lst.stream(), userRequestList.stream()).collect(Collectors.toList());
@@ -214,14 +220,16 @@ public class ApprovalEventService {
         // Get role-based task IDs
         List<String> roleIds = getRoleIdsFromUser(userId);
         for (String roleId : roleIds) {
-            allTaskIDs.addAll(getTaskIDsByEntity(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, roleId, status));
+            allTaskIDs.addAll(getTaskIDsByEntity(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES, roleId,
+                    status));
         }
 
         // Get user-based task IDs
         allTaskIDs.addAll(getTaskIDsByEntity(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS, userId, status));
 
         // Get claimed-user-based task IDs
-        allTaskIDs.addAll(getTaskIDsByEntity(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_CLAIMED_USERS, userId, status));
+        allTaskIDs.addAll(getTaskIDsByEntity(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_CLAIMED_USERS, userId,
+                status));
 
         return allTaskIDs;
     }
@@ -240,8 +248,9 @@ public class ApprovalEventService {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
-        try{
-            List<String> roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().getRoleIdListOfUser(approverId, tenantDomain);
+        try {
+            List<String> roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().
+                    getRoleIdListOfUser(approverId, tenantDomain);
             return new ArrayList<>(roleIDList);
 
         } catch (IdentityRoleManagementException e) {
@@ -530,7 +539,8 @@ public class ApprovalEventService {
 //                    approverType = workflowEventRequestDAO.getApproverType(taskId);
 //                    for (String id: taskIdsOfRequest) {
 //                        workflowEventRequestDAO.updateStatusOfRequest(id, status);
-//                        if (taskId.equals(id) && approverType.equals(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_CLAIMED_USERS)) {
+//                        if (taskId.equals(id) && approverType.equals(WorkflowEngineConstants.
+//                        ParameterName.ENTITY_TYPE_CLAIMED_USERS)) {
 //                            workflowEventRequestDAO.deleteApproversOfRequest(id);
 //                        }
 //                    }
@@ -616,8 +626,10 @@ public class ApprovalEventService {
 
                 default:
                     throw new WorkflowEngineClientException(
-                            WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.getCode(),
-                            WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.getDescription()
+                            WorkflowEngineConstants.ErrorMessages.
+                                    USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.getCode(),
+                            WorkflowEngineConstants.ErrorMessages.
+                                    USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.getDescription()
                     );
             }
         } catch (WorkflowEngineClientException e) {
@@ -657,7 +669,8 @@ public class ApprovalEventService {
         for (String id : taskIds) {
             dao.updateStatusOfRequest(id, readyStatus);
 
-            if (taskId.equals(id) && WorkflowEngineConstants.ParameterName.ENTITY_TYPE_CLAIMED_USERS.equals(approverType)) {
+            if (taskId.equals(id) && WorkflowEngineConstants.ParameterName.
+                    ENTITY_TYPE_CLAIMED_USERS.equals(approverType)) {
                 dao.deleteApproversOfRequest(id);
             }
         }
