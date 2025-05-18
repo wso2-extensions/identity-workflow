@@ -286,7 +286,7 @@
         <h2database.version>2.1.210</h2database.version>
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
         <org.wso2.carbon.framework.version>4.10.34</org.wso2.carbon.framework.version>
-        <org.wso2.carbon.identity.workflow.mgt.version>5.5.15-SNAPSHOT</org.wso2.carbon.identity.workflow.mgt.version>
+        <org.wso2.carbon.identity.workflow.mgt.version>5.5.21</org.wso2.carbon.identity.workflow.mgt.version>
         <osgi.framework.import.version.range>[1.2.0, 2.0.0)</osgi.framework.import.version.range>
         <osgi.service.component.import.version.range>[1.2.0, 2.0.0)</osgi.service.component.import.version.range>
         <org.wso2.carbon.identity.workflow.mgt.version.range>[5.5.0, 6.0.0)</org.wso2.carbon.identity.workflow.mgt.version.range>
