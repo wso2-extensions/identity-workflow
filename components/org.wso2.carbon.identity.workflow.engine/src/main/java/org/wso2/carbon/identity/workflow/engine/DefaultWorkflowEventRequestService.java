@@ -32,7 +32,7 @@ import java.util.UUID;
  */
 public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventRequest {
 
-    private WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
+    private final WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
     private static final Log log = LogFactory.getLog(DefaultWorkflowEventRequestService.class);
 
     /**
@@ -42,7 +42,6 @@ public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventR
     public void addApproversOfRequests(WorkflowRequest request, List<Parameter> parameterList) {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-//        String taskId = UUID.randomUUID().toString();
         String eventId = getRequestId(request);
         String workflowId = getWorkflowId(request);
         String approverType;
