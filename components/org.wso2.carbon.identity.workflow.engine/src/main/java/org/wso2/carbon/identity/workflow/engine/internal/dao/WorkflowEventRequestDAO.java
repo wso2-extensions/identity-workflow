@@ -18,7 +18,8 @@ public interface WorkflowEventRequestDAO {
      * @param approverName the value of the approver type.
      * @param taskStatus   state of the tasks [RESERVED, READY or COMPLETED].
      */
-    void addApproversOfRequest(String taskId, String eventId, String workflowId, String approverType, String approverName, String taskStatus);
+    void addApproversOfRequest(String taskId, String eventId, String workflowId, String approverType,
+                               String approverName, String taskStatus);
 
     /**
      * Get taskId from table.
@@ -103,6 +104,46 @@ public interface WorkflowEventRequestDAO {
     List<String> getRequestsList(String approverName);
 
     /**
+     * Returns the events list according to the user and type.
+     *
+     * @param approverType entity type.
+     * @param approverName entity value.
+     * @return events list.
+     */
+    List<String> getRequestsList(String approverType, String approverName);
+
+    /**
+     * Returns the task id list according to the user and type.
+     *
+     * @param approverType entity type.
+     * @param approverName entity value.
+     * @return events list.
+     */
+    List<String> getTaskIDList(String approverType, String approverName);
+
+    /**
+     * Returns the task id list according to the user, type and status.
+     *
+     * @param approverType entity type.
+     * @param approverName entity value.
+     * @param status request status
+     * @return events list.
+     */
+    List<String> getTaskIDListByStatus(String approverType, String approverName, String status);
+
+
+    /**
+     * Returns the events list filtered by user, type and status
+     *
+     * @param approverType entity type.
+     * @param approverName entity value.
+     * @param status request status
+     * @return events list.
+     */
+    List<String> getRequestsListByStatus(String approverType, String approverName, String status);
+
+
+    /**
      * Returns the event type given the request ID.
      *
      * @param requestId the request ID that need to be checked.
@@ -151,6 +192,14 @@ public interface WorkflowEventRequestDAO {
     List<String> listApprovers(String taskId);
 
     /**
+     * Returns the approver type given the task ID.
+     *
+     * @param taskId the task ID that need to be checked.
+     * @return approver type.
+     */
+    String getApproverType(String taskId);
+
+    /**
      * Returns the task status given the request ID [RESERVED, READY or COMPLETED].
      *
      * @param requestId the request ID that need to be checked.
@@ -196,4 +245,14 @@ public interface WorkflowEventRequestDAO {
      * @return entity name of the request
      */
     String getEntityNameOfRequest(String requestID);
+
+    /**
+     * Retrieve the association name giving workflow ID and event type.
+     *
+     * @param workflowID the workflow ID that need to be checked.
+     * @param eventType the event type that need to be checked.
+     * @return association name
+     */
+    String getAssociationName(String workflowID, String eventType);
 }
+

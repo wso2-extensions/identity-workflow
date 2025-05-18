@@ -16,16 +16,25 @@
      <dependencies>
          <dependency>
              <groupId>org.wso2.carbon.identity.framework</groupId>
-             <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
+             <artifactId>org.wso2.carbon.identity.role.v2.mgt.core</artifactId>
+         </dependency>
+         <dependency>
+             <groupId>org.wso2.carbon.identity.workflow.impl.bps</groupId>
+             <artifactId>org.wso2.carbon.identity.workflow.mgt</artifactId>
+         </dependency>
+         <dependency>
+             <groupId>org.wso2.carbon.identity.framework</groupId>
+             <artifactId>org.wso2.carbon.identity.core</artifactId>
          </dependency>
          <dependency>
              <groupId>org.wso2.carbon.identity.framework</groupId>
              <artifactId>org.wso2.carbon.user.mgt.common</artifactId>
          </dependency>
          <dependency>
-             <groupId>org.wso2.carbon.identity.framework</groupId>
-             <artifactId>org.wso2.carbon.identity.workflow.mgt</artifactId>
+             <groupId>org.wso2.carbon</groupId>
+             <artifactId>org.wso2.carbon.utils</artifactId>
          </dependency>
+
          <dependency>
              <groupId>org.apache.felix</groupId>
              <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
@@ -56,6 +65,10 @@
              <groupId>org.ops4j.pax.logging</groupId>
              <artifactId>pax-logging-api</artifactId>
          </dependency>
+         <dependency>
+             <groupId>org.wso2.carbon.identity.workflow.impl.bps</groupId>
+             <artifactId>org.wso2.carbon.identity.workflow.mgt</artifactId>
+         </dependency>
      </dependencies>
 
      <build>
@@ -72,6 +85,29 @@
                              <Private-Package>
                                  org.wso2.carbon.identity.workflow.engine.internal,
                              </Private-Package>
+                             <Import-Package>
+                                 org.osgi.framework; version="${osgi.framework.import.version.range}",
+                                 org.osgi.service.component; version="${osgi.service.component.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.util; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.bean; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.bean.metadata; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.dto; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.workflow; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.exception; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.dao; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.callback; version="${org.wso2.carbon.identity.workflow.mgt.version.range}",
+                                 org.wso2.carbon.identity.role.v2.mgt.core; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.role.v2.mgt.core.exception; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.core.util; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.utils.multitenancy; version="${carbon.kernel.package.import.version.range}",
+                                 org.wso2.carbon.context; version="${carbon.kernel.package.import.version.range}",
+                                 org.wso2.carbon.database.utils.jdbc; version ="${org.wso2.carbon.database.utils.version.range}",
+                                 org.wso2.carbon.database.utils.jdbc.exceptions; version ="${org.wso2.carbon.database.utils.version.range}",
+                                 org.apache.commons.logging,
+                                 org.apache.commons.lang,
+                                 org.apache.commons.collections
+                             </Import-Package>
                              <Export-Package>
                                  !org.wso2.carbon.identity.workflow.engine.internal,
                                  org.wso2.carbon.identity.workflow.engine.*;

@@ -15,8 +15,11 @@ public class TaskSummaryDTO {
 
     private String taskType = null;
 
+    /**
+     * Represents the various statuses in an approval task's lifecycle.
+     */
     public enum StatusEnum {
-        READY, RESERVED, COMPLETED,
+        READY, RESERVED, COMPLETED, BLOCKED
     }
 
     private StatusEnum status = null;

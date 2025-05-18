@@ -18,6 +18,7 @@ import org.wso2.carbon.identity.workflow.engine.util.TestUtils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+
 import javax.sql.DataSource;
 
 import static org.powermock.api.mockito.PowerMockito.mock;

@@ -1,7 +1,7 @@
 package org.wso2.carbon.identity.workflow.engine.internal;
 
 import org.osgi.framework.BundleContext;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowExecutorManagerService;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.workflow.AbstractWorkflow;
 
@@ -17,7 +17,7 @@ public class WorkflowEngineServiceDataHolder {
 
     private WorkflowManagementService workflowManagementService;
 
-    private WorkflowExecutorManagerService workflowExecutorManagerService;
+    private RoleManagementService roleManagementService;
 
     private BundleContext bundleContext;
 
@@ -51,21 +51,20 @@ public class WorkflowEngineServiceDataHolder {
         this.workflowManagementService = workflowManagementService;
     }
 
-    public WorkflowExecutorManagerService getWorkflowExecutorManagerService() {
-
-        return workflowExecutorManagerService;
+    public RoleManagementService getRoleManagementService() {
+        return roleManagementService;
     }
 
-    public void setWorkflowExecutorManagerService(
-            WorkflowExecutorManagerService workflowExecutorManagerService) {
-
-        this.workflowExecutorManagerService = workflowExecutorManagerService;
+    public void setRoleManagementService(RoleManagementService roleManagementService) {
+        this.roleManagementService = roleManagementService;
     }
 
-    private Map<String, Map<String, AbstractWorkflow>> workflowImpls = new HashMap<String, Map<String, AbstractWorkflow>>();
+    private Map<String, Map<String, AbstractWorkflow>> workflowImpls
+            = new HashMap<String, Map<String, AbstractWorkflow>>();
 
     public Map<String, Map<String, AbstractWorkflow>> getWorkflowImpls() {
 
         return workflowImpls;
     }
+
 }

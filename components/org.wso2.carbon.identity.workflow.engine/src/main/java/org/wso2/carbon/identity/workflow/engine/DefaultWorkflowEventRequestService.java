@@ -3,23 +3,27 @@ package org.wso2.carbon.identity.workflow.engine;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineClientException;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
+import org.wso2.carbon.identity.workflow.engine.internal.WorkflowEngineServiceDataHolder;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowEventRequestDAO;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.WorkflowEventRequestDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowExecutorManagerService;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowExecutorManagerServiceImpl;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementServiceImpl;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.bean.RequestParameter;
 import org.wso2.carbon.identity.workflow.mgt.bean.Workflow;
 import org.wso2.carbon.identity.workflow.mgt.bean.WorkflowAssociation;
+import org.wso2.carbon.identity.workflow.mgt.dao.WorkflowRequestAssociationDAO;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
 import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +32,7 @@ import java.util.UUID;
  */
 public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventRequest {
 
-    private WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
+    private final WorkflowEventRequestDAO workflowEventRequestDAO = new WorkflowEventRequestDAOImpl();
     private static final Log log = LogFactory.getLog(DefaultWorkflowEventRequestService.class);
 
     /**
@@ -37,7 +41,7 @@ public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventR
     @Override
     public void addApproversOfRequests(WorkflowRequest request, List<Parameter> parameterList) {
 
-        String taskId = UUID.randomUUID().toString();
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String eventId = getRequestId(request);
         String workflowId = getWorkflowId(request);
         String approverType;
@@ -48,25 +52,50 @@ public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventR
         }
         currentStepValue += 1;
         updateStateOfRequest(eventId, workflowId);
-            for (Parameter parameter : parameterList) {
+        int approverCountInCurrentStep = 0;
+        List<String> taskIdsOfCurrentStep = new ArrayList<>();
+        for (Parameter parameter : parameterList) {
                 if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
                     String[] stepName = parameter.getqName().split("-");
-                    int step = Integer.parseInt(stepName[2]);
+                    int step = Integer.parseInt(stepName[1]);
                     if (currentStepValue == step) {
                         approverType = stepName[stepName.length - 1];
 
                         String approver = parameter.getParamValue();
                         if (approver != null && !approver.isEmpty()) {
                             String[] approvers = approver.split(",", 0);
+                            approverCountInCurrentStep += approvers.length; // Efficient count here
                             for (String name : approvers) {
+                                String taskId = UUID.randomUUID().toString();
                                 approverName = name;
-                                String taskStatus= WorkflowEngineConstants.ParameterName.TASK_STATUS_DEFAULT;
+                                String taskStatus = WorkflowEngineConstants.ParameterName.TASK_STATUS_DEFAULT;
+                                if (approverType.equals(WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES)) {
+                                    try {
+                                        List<UserBasicInfo> userListOfRole =
+                                                WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService()
+                                                        .getUserListOfRole(name, tenantDomain);
+                                        if (userListOfRole.size() == 1) {
+                                            taskStatus = WorkflowEngineConstants.ParameterName.TASK_STATUS_DEFAULT;
+                                        } else {
+                                            taskStatus = WorkflowEngineConstants.ParameterName.TASK_STATUS_READY;
+                                        }
+                                    } catch (IdentityRoleManagementException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
                                 workflowEventRequestDAO.addApproversOfRequest(taskId, eventId, workflowId,
-                                        approverType, approverName,taskStatus);
+                                        approverType, approverName, taskStatus);
+                                taskIdsOfCurrentStep.add(taskId);
                             }
                         }
                     }
                 }
+        }
+        if (approverCountInCurrentStep > 1) {
+            for (String taskId: taskIdsOfCurrentStep) {
+                workflowEventRequestDAO.updateStatusOfRequest(taskId,
+                        WorkflowEngineConstants.ParameterName.TASK_STATUS_READY);
+            }
         }
     }
 
@@ -111,15 +140,12 @@ public class DefaultWorkflowEventRequestService implements DefaultWorkflowEventR
     @Override
     public List<WorkflowAssociation> getAssociations(WorkflowRequest workflowRequest) {
 
-        List<WorkflowAssociation> associations;
-        WorkflowExecutorManagerService workFlowExecutorManagerService = new WorkflowExecutorManagerServiceImpl();
+        List<WorkflowAssociation> associations = null;
+        WorkflowRequestAssociationDAO requestAssociationDAO = new WorkflowRequestAssociationDAO();
         try {
-            associations = workFlowExecutorManagerService.getWorkflowAssociationsForRequest(
+            associations = requestAssociationDAO.getWorkflowAssociationsForRequest(
                     workflowRequest.getEventType(), workflowRequest.getTenantId());
         } catch (InternalWorkflowException e) {
-            throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.ASSOCIATION_NOT_FOUND.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.ASSOCIATION_NOT_FOUND.getDescription());
         }
         return associations;
     }

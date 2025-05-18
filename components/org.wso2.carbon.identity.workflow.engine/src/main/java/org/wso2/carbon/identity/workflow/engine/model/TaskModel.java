@@ -27,7 +27,8 @@ public class TaskModel {
     }
 
     /**
-     * To whom the task is assigned:\n  * user - username(s) if the task is reserved for specific user(s).\n  * group - role name(s) if the task is assignable for group(s).\n
+     * To whom the task is assigned:\n  * user - username(s) if the task is reserved for specific user(s).
+     * group - role name(s) if the task is assignable for group(s).
      **/
     public Map<String, String> getAssignees() {
 
@@ -35,7 +36,8 @@ public class TaskModel {
     }
 
     /**
-     * Set to whom the task is assigned:\n  * user - username(s) if the task is reserved for specific user(s).\n  * group - role name(s) if the task is assignable for group(s).\n
+     * Set to whom the task is assigned:\n  * user - username(s) if the task is reserved for specific user(s).
+     * group - role name(s) if the task is assignable for group(s).
      **/
     public void setAssignees(Map<String, String> assignees) {
 

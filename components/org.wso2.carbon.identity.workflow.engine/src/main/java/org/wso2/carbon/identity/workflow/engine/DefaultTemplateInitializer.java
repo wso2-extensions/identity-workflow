@@ -18,7 +18,7 @@ public class DefaultTemplateInitializer implements TemplateInitializer {
     private String processName;
     private String htName;
     private String role;
-    private String tenantContext = "" ;
+    private String tenantContext = "";
     private static final String HT_SUFFIX = "Task";
 
     /**
@@ -52,7 +52,7 @@ public class DefaultTemplateInitializer implements TemplateInitializer {
         }
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        if(!MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)){
+        if (!MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
             tenantContext = "t/" + tenantDomain + "/";
         }
         htName = processName + DefaultTemplateInitializer.HT_SUFFIX;
