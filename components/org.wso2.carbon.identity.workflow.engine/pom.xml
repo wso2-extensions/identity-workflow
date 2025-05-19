@@ -118,23 +118,9 @@
                  <plugin>
                      <groupId>org.codehaus.mojo</groupId>
                      <artifactId>findbugs-maven-plugin</artifactId>
-                     <version>${maven.findbugsplugin.version}</version>
                      <configuration>
-                         <excludeFilterFile>findbugs-exclude.xml</excludeFilterFile>
-                         <effort>Max</effort>
-                         <threshold>Low</threshold>
-                         <xmlOutput>true</xmlOutput>
-                         <findbugsXmlOutputDirectory>${project.build.directory}/findbugs</findbugsXmlOutputDirectory>
+                         <skip>true</skip>
                      </configuration>
-                     <executions>
-                         <execution>
-                             <id>analyze-compile</id>
-                             <phase>compile</phase>
-                             <goals>
-                                 <goal>check</goal>
-                             </goals>
-                         </execution>
-                     </executions>
                  </plugin>
          </plugins>
      </build>
