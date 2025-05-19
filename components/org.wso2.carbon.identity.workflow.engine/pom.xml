@@ -6,7 +6,7 @@
     <parent>
         <artifactId>default.workflow.engine</artifactId>
         <groupId>org.wso2.carbon.identity.workflow.engine</groupId>
-         <version>1.0-SNAPSHOT</version>
+         <version>1.0.0-SNAPSHOT</version>
          <relativePath>../../pom.xml</relativePath>
      </parent>
      <artifactId>workflow.engine</artifactId>
