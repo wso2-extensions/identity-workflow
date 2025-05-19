@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.workflow.engine.internal;
 
 import org.osgi.framework.BundleContext;
@@ -20,7 +38,7 @@ import org.wso2.carbon.identity.workflow.mgt.workflow.AbstractWorkflow;
  * service.
  */
 @Component(
-        name = "simple.workflow.engine",
+        name = "workflow.engine",
         immediate = true)
 public class WorkflowEngineServiceComponent {
 
@@ -44,9 +62,9 @@ public class WorkflowEngineServiceComponent {
 
         return "<met:MetaData xmlns:met=\"http://metadata.bean.mgt.workflow.identity.carbon.wso2.org\">\n" +
                 "<met:WorkflowImpl>\n" +
-                "    <met:WorkflowImplId>workflowImplSimple</met:WorkflowImplId>\n" +
-                "    <met:WorkflowImplName>SimpleWorkflowEngine</met:WorkflowImplName>\n" +
-                "    <met:WorkflowImplDescription>Simple WorkflowEngine</met:WorkflowImplDescription>\n" +
+                "    <met:WorkflowImplId>workflowImpl</met:WorkflowImplId>\n" +
+                "    <met:WorkflowImplName>WorkflowEngine</met:WorkflowImplName>\n" +
+                "    <met:WorkflowImplDescription>WorkflowEngine</met:WorkflowImplDescription>\n" +
                 "    <met:TemplateId>MultiStepApprovalTemplate</met:TemplateId>\n" +
                 "    <met:ParametersMetaData>\n" +
                 "        <met:ParameterMetaData Name=\"HTSubject\" DataType=\"String\" InputType=\"Text\" " +
@@ -93,5 +111,4 @@ public class WorkflowEngineServiceComponent {
 
         WorkflowEngineServiceDataHolder.getInstance().setRoleManagementService(null);
     }
-
 }

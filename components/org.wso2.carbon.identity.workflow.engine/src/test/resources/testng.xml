@@ -2,7 +2,7 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
 <suite name="All Test Suite">
     <test verbose="2" preserve-order="true"
-          name="/home/ishara/identity-workflow-simple/components/org.wso2.carbon.identity.workflow.engine/src/test/java/org/wso2/carbon/identity/workflow/engine">
+          name="workflow-engine">
         <classes>
             <class name="org.wso2.carbon.identity.workflow.engine.DefaultWorkflowEventRequestServiceTest">
                 <methods>
