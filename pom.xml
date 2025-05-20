@@ -313,7 +313,7 @@
         <maven.findbugsplugin.version>3.0.5</maven.findbugsplugin.version>
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
         <apache.felix.scr.ds.annotations.version>1.2.8</apache.felix.scr.ds.annotations.version>
-        <carbon.identity.framework.version>7.8.151-SNAPSHOT</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.8.156</carbon.identity.framework.version>
         <axiom.wso2.version>1.2.11-wso2v16</axiom.wso2.version>
         <testng.version>7.4.0</testng.version>
         <mockito.version>3.2.4</mockito.version>
