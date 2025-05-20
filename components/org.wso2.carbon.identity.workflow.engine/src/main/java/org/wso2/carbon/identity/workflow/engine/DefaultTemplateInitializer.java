@@ -60,8 +60,7 @@ public class DefaultTemplateInitializer implements TemplateInitializer {
 
         Parameter wfNameParameter = WorkflowManagementUtil
                 .getParameter(list, WorkflowEngineConstants.ParameterValue.WORKFLOW_NAME,
-                        WorkflowEngineConstants.ParameterHolder
-                        .WORKFLOW_IMPL);
+                        WorkflowEngineConstants.ParameterHolder.WORKFLOW_NAME);
 
         if (wfNameParameter != null) {
             processName = StringUtils.deleteWhitespace(wfNameParameter.getParamValue());

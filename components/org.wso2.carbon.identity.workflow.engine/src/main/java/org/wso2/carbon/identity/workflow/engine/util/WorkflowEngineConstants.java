@@ -150,7 +150,7 @@ public class WorkflowEngineConstants {
      */
     public static class ParameterHolder {
 
-        public static final String WORKFLOW_IMPL = "WorkflowImpl";
+        public static final String WORKFLOW_NAME = "WorkflowEngine";
     }
 
     /**
