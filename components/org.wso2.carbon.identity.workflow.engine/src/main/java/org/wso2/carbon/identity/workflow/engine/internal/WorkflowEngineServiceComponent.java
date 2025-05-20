@@ -62,7 +62,7 @@ public class WorkflowEngineServiceComponent {
 
         return "<met:MetaData xmlns:met=\"http://metadata.bean.mgt.workflow.identity.carbon.wso2.org\">\n" +
                 "<met:WorkflowImpl>\n" +
-                "    <met:WorkflowImplId>workflowImpl</met:WorkflowImplId>\n" +
+                "    <met:WorkflowImplId>WorkflowEngine</met:WorkflowImplId>\n" +
                 "    <met:WorkflowImplName>WorkflowEngine</met:WorkflowImplName>\n" +
                 "    <met:WorkflowImplDescription>WorkflowEngine</met:WorkflowImplDescription>\n" +
                 "    <met:TemplateId>MultiStepApprovalTemplate</met:TemplateId>\n" +
