@@ -300,7 +300,7 @@ public class ApprovalEventService {
             taskDataDTO.setDescription(taskDetails.getTaskDescription());
             String statusValue = setStatusOfTask(taskId);
             taskDataDTO.setApprovalStatus(TaskDataDTO.ApprovalStatusEnum.valueOf(statusValue));
-            taskDataDTO.setInitiator(WorkflowEngineConstants.ParameterName.INITIATED_BY + initiator);
+            taskDataDTO.setInitiator(initiator);
             taskDataDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
             TaskModel taskModel = new TaskModel();
             taskModel.setAssignees(assigneeMap);
