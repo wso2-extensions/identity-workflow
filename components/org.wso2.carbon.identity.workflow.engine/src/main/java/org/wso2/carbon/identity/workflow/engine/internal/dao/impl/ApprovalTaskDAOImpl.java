@@ -24,20 +24,19 @@ import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.util.JdbcUtils;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
-import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowEventRequestDAO;
+import org.wso2.carbon.identity.workflow.engine.internal.dao.ApprovalTaskDAO;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.List;
 
 /**
  * Workflow Event Request DAO implementation.
  */
-public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
+public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
 
-    private static final Log log = LogFactory.getLog(WorkflowEventRequestDAOImpl.class.getName());
+    private static final Log log = LogFactory.getLog(ApprovalTaskDAOImpl.class.getName());
 
     /**
      * {@inheritDoc}
@@ -118,7 +117,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      *{@inheritDoc}
      */
     @Override
-    public void createStatesOfRequest(String eventId, String workflowId, int currentStep) {
+    public void addApprovalTaskStep(String eventId, String workflowId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
@@ -126,7 +125,6 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
                     preparedStatement -> {
                         preparedStatement.setString(1, eventId);
                         preparedStatement.setString(2, workflowId);
-                        preparedStatement.setInt(3, currentStep);
                     });
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while adding request approval steps" +
@@ -138,11 +136,8 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public int getStateOfRequest(String eventId, String workflowId) {
+    public int getCurrentApprovalStepOfWorkflowRequest(String requestId, String workflowId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String stepExists;
@@ -151,7 +146,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
                     ((resultSet, i) -> (
                             Integer.toString(resultSet.getInt(WorkflowEngineConstants.CURRENT_STEP_COLUMN)))),
                     preparedStatement -> {
-                        preparedStatement.setString(1, eventId);
+                        preparedStatement.setString(1, requestId);
                         preparedStatement.setString(2, workflowId);
                     });
             if (stepExists == null) {
@@ -159,7 +154,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
             }
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving currentStep from" +
-                    "event Id: %s & workflowId: %s", eventId, workflowId);
+                    "event Id: %s & workflowId: %s", requestId, workflowId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -252,61 +247,13 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public List<Integer> getRolesID(String userName) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        List<Integer> roleIdList;
-        try {
-            roleIdList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_ROLE_ID, (resultSet, rowNumber) ->
-                            resultSet.getInt(WorkflowEngineConstants.ROLE_ID_COLUMN),
-                    preparedStatement -> preparedStatement.setString(1, userName));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving Role ID from" +
-                    "user name: %s", userName);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return roleIdList;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<String> getRoleNames(int roleId) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        List<String> roleNameList;
-        try {
-            roleNameList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_ROLE_NAME, (resultSet, rowNumber) ->
-                            resultSet.getString(WorkflowEngineConstants.ROLE_NAME),
-                    preparedStatement -> preparedStatement.setInt(1, roleId));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving Role name from" +
-                    "role ID: %d", roleId);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return roleNameList;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getRequestID(String taskId) {
+    public String getWorkflowRequestIdByTaskId(String taskId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String requestId;
         try {
             requestId = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_REQUEST_ID,
+                            GET_APPROVAL_TASK_BY_TASK_ID,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.EVENT_ID))),
                     preparedStatement -> preparedStatement.setString(1, taskId));
@@ -319,31 +266,6 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
             throw new WorkflowEngineServerException(errorMessage, e);
         }
         return requestId;
-    }
-
-    /**
-     *{@inheritDoc}
-     */
-    @Override
-    public String getInitiatedUser(String requestId) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String createdBy;
-        try {
-            createdBy = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_CREATED_USER,
-                    ((resultSet, i) -> (
-                            resultSet.getString(WorkflowEngineConstants.CREATED_USER_COLUMN))),
-                    preparedStatement -> preparedStatement.setString(1, requestId));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving initiator from" +
-                    "requestId: %s", requestId);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return createdBy;
     }
 
     /**
@@ -452,60 +374,8 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
     /**
      * {@inheritDoc}
      */
-    public List<String> getRequestsListByStatus(String approverType, String approverName, String status) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        List<String> requestIdList;
-        try {
-            requestIdList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_REQUEST_ID_FROM_APPROVER_AND_TYPE_BY_STATUS, (resultSet, rowNumber) ->
-                            resultSet.getString(WorkflowEngineConstants.EVENT_ID),
-                    preparedStatement -> {
-                        preparedStatement.setString(1, approverName);
-                        preparedStatement.setString(2, approverType);
-                        preparedStatement.setString(3, status);
-                    });
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving request id from" +
-                    "approver name: %s" + " of approver type: %s", approverName, approverType);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return requestIdList;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public String getEventType(String requestId) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String eventType;
-        try {
-            eventType = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_EVENT_TYPE,
-                    ((resultSet, i) -> (
-                            resultSet.getString(WorkflowEngineConstants.EVENT_TYPE_COLUMN))),
-                    preparedStatement -> preparedStatement.setString(1, requestId));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving event type from" +
-                    "request : %s", requestId);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return eventType;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getTaskStatusOfRequest(String taskId) {
+    public String getApprovalTaskStatus(String taskId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String taskStatus;
@@ -530,32 +400,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public String getStatusOfTask(String requestId) {
-
-       JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-            String taskStatus;
-            try {
-                taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                                GET_STATUS,
-                        ((resultSet, i) -> (
-                                resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN))),
-                        preparedStatement -> preparedStatement.setString(1, requestId));
-            } catch (DataAccessException e) {
-                String errorMessage = String.format("Error occurred while retrieving task status from" +
-                        "request Id: %s", requestId);
-                if (log.isDebugEnabled()) {
-                    log.debug(errorMessage, e);
-                }
-                throw new WorkflowEngineServerException(errorMessage, e);
-            }
-            return taskStatus;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void updateStatusOfRequest(String taskId, String taskStatus) {
+    public void updateApprovalTaskStatus(String taskId, String taskStatus) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
@@ -579,32 +424,7 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
      * {@inheritDoc}
      */
     @Override
-    public String getRelationshipId(String eventId) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String taskStatus;
-        try {
-            taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_REQUEST_ID_OF_RELATIONSHIP,
-                    ((resultSet, i) -> (
-                            resultSet.getString(WorkflowEngineConstants.RELATIONSHIP_ID_IN_REQUEST_COLUMN))),
-                    preparedStatement -> preparedStatement.setString(1, eventId));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving relationship ID from" +
-                    "event Id: %s", eventId);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return taskStatus;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<String> getTaskId(String eventId) {
+    public List<String> getTaskIds(String eventId) {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         List<String> taskIdList;
@@ -624,55 +444,11 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
         return taskIdList;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Timestamp getCreatedAtTimeInMill(String requestId) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        java.sql.Timestamp createdTime;
-        try {
-            createdTime = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_CREATED_TIME_IN_MILL,
-                    ((resultSet, i) -> (
-                            resultSet.getTimestamp(WorkflowEngineConstants.CREATED_AT_IN_MILL_COLUMN))),
-                    preparedStatement -> preparedStatement.setString(1, requestId));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving createdAt time from" +
-                    "request Id: %s", requestId);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return createdTime;
-    }
-
     private void setPreparedStatementForStatusOfRequest(String taskStatus, String taskId,
                                                         PreparedStatement preparedStatement) throws SQLException {
 
         preparedStatement.setString(1, taskStatus);
         preparedStatement.setString(2, taskId);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void deleteCurrentStepOfRequest(String eventId) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        try {
-            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.DELETE_CURRENT_STEP_OF_REQUEST,
-                    preparedStatement -> preparedStatement.setString(1, eventId));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error while deleting the current step from eventID:%s", eventId);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
     }
 
     /**
@@ -699,83 +475,4 @@ public class WorkflowEventRequestDAOImpl implements WorkflowEventRequestDAO {
         }
         return taskStatus;
     }
-
-    /**
-     *{@inheritDoc}
-     */
-    @Override
-    public String getWorkflowName(String workflowID) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String taskStatus;
-        try {
-            taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_WORKFLOW_NAME,
-                    ((resultSet, i) -> (
-                            resultSet.getString(WorkflowEngineConstants.WORKFLOW_NAME))),
-                    preparedStatement -> preparedStatement.setString(1, workflowID));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving workflow name from" +
-                    "workflow Id: %s", workflowID);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return taskStatus;
-    }
-
-    /**
-     *{@inheritDoc}
-     */
-    @Override
-    public String getEntityNameOfRequest(String requestID) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String taskStatus;
-        try {
-            taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_ENTITY_NAME,
-                    ((resultSet, i) -> (
-                            resultSet.getString(WorkflowEngineConstants.ENTITY_NAME))),
-                    preparedStatement -> preparedStatement.setString(1, requestID));
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving workflow name from" +
-                    "workflow Id: %s", requestID);
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return taskStatus;
-    }
-
-    @Override
-    public String getAssociationName(String workflowID, String eventType) {
-
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String taskStatus;
-        try {
-            taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_WORKFLOW_ASSOCIATION_NAME,
-                    ((resultSet, i) -> (
-                            resultSet.getString(WorkflowEngineConstants.WORKFLOW_ASSOCIATION_NAME))),
-                    preparedStatement -> {
-                        preparedStatement.setString(1, workflowID);
-                        preparedStatement.setString(2, eventType);
-                    });
-        } catch (DataAccessException e) {
-            String errorMessage = String.format(
-                    "Error occurred while retrieving workflow association name from workflowId: %s and eventType: %s",
-                    workflowID, eventType
-            );
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
-            }
-            throw new WorkflowEngineServerException(errorMessage, e);
-        }
-        return taskStatus;
-    }
-
-
 }

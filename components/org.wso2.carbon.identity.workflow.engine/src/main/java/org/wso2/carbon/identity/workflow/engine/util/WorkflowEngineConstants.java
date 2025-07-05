@@ -54,7 +54,7 @@ public class WorkflowEngineConstants {
         public static final String DELETE_APPROVAL_LIST_RELATED_TO_USER = "DELETE FROM WF_WORKFLOW_APPROVAL_RELATION" +
                 " WHERE TASK_ID=?";
         public static final String ADD_CURRENT_STEP_FOR_EVENT = "INSERT INTO WF_WORKFLOW_APPROVAL_STATE " +
-                "(EVENT_ID,WORKFLOW_ID, CURRENT_STEP) VALUES (?,?,?)";
+                "(EVENT_ID,WORKFLOW_ID, CURRENT_STEP) VALUES (?,?,1)";
         public static final String GET_CURRENT_STEP = "SELECT CURRENT_STEP FROM WF_WORKFLOW_APPROVAL_STATE WHERE " +
                 "EVENT_ID = ? AND WORKFLOW_ID = ?";
         public static final String UPDATE_STATE_OF_REQUEST = "UPDATE WF_WORKFLOW_APPROVAL_STATE SET CURRENT_STEP=? " +
@@ -70,8 +70,8 @@ public class WorkflowEngineConstants {
                 "WHERE TASK_ID = ?";
         public static final String UPDATE_TASK_STATUS = "UPDATE WF_WORKFLOW_APPROVAL_RELATION SET TASK_STATUS=? " +
                 "WHERE TASK_ID=?";
-        public static final String GET_REQUEST_ID = "SELECT DISTINCT EVENT_ID FROM WF_WORKFLOW_APPROVAL_RELATION " +
-                "WHERE TASK_ID = ?";
+        public static final String GET_APPROVAL_TASK_BY_TASK_ID = "SELECT EVENT_ID, WORKFLOW_ID, APPROVER_TYPE, " +
+                "APPROVER_NAME, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String GET_ENTITY_NAME = "SELECT ENTITY_NAME FROM WF_REQUEST_ENTITY_RELATIONSHIP " +
                 "WHERE REQUEST_ID = ?";
         public static final String GET_TASK_ID_FROM_REQUEST = "SELECT TASK_ID FROM WF_WORKFLOW_APPROVAL_RELATION " +
@@ -97,11 +97,6 @@ public class WorkflowEngineConstants {
         public static final String GET_CREATED_TIME_IN_MILL = "SELECT CREATED_AT FROM WF_REQUEST WHERE UUID= ?";
         public static final String GET_REQUEST_ID_OF_RELATIONSHIP = "SELECT RELATIONSHIP_ID FROM " +
                 "WF_WORKFLOW_REQUEST_RELATION WHERE REQUEST_ID = ?";
-        public static final String GET_WORKFLOW_NAME = "SELECT WF_NAME FROM WF_WORKFLOW WHERE ID =? ";
-        public static final String GET_ROLE_ID = "SELECT UM_ROLE_ID FROM UM_HYBRID_USER_ROLE WHERE UM_USER_NAME=?";
-        public static final String GET_ROLE_NAME = "SELECT UM_ROLE_NAME FROM UM_HYBRID_ROLE WHERE UM_ID=?";
-        public static final String GET_WORKFLOW_ASSOCIATION_NAME = "SELECT ASSOC_NAME FROM WF_WORKFLOW_ASSOCIATION " +
-                "WHERE WORKFLOW_ID = ? AND EVENT_ID = ?";
     }
 
     /**
@@ -117,15 +112,10 @@ public class WorkflowEngineConstants {
         public static final String TASK_DESCRIPTION = "ApprovalTaskDescription";
         public static final String PRIORITY = "High";
         public static final String APPROVAL_TASK = "Approval task";
-        public static final String INTERNAL_USER = "Internal/";
-        public static final String APPLICATION_USER = "Application";
-        public static final String SYSTEM_USER = "system";
-        public static final String SYSTEM_PRIMARY_USER = "system_primary_";
         public static final String ASSIGNEE_TYPE = "Type";
         public static final String CREDENTIAL = "Credential";
         public static final String HT_SUBJECT = "ApprovalTaskSubject";
         public static final String INITIATED_BY = "Initiated_by ";
-        public static final String ENTITY_NAME = " User_Name:";
         public static final String ENTITY_TYPE_ROLES = "roles";
         public static final String ENTITY_TYPE_USERS = "users";
         public static final String ENTITY_TYPE_CLAIMED_USERS = "claimedUsers";
@@ -179,12 +169,14 @@ public class WorkflowEngineConstants {
         ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_OF_USER("SWE_00007", "Unable to retrieve the " +
                 "user approval, " +
                 "Server encountered an error while retrieving information on the approval task."),
-        ERROR_OCCURRED_WHILE_RETRIEVING_APPROVALS_FOR_USER("SWE_00008", "Unable to retrieve " +
+        ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER("SWE_00008", "Unable to retrieve " +
                 "approvals for the user, " +
                 "Server encountered an error while retrieving approvals for user."),
         USER_ERROR_NON_EXISTING_TASK_ID("SWE_10001", "Task does not exist."),
         USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE("10005", "Unacceptable input provided, " +
-                "Only [CLAIM, RELEASE, APPROVED, REJECTED] are acceptable.");
+                "Only [CLAIM, RELEASE, APPROVED, REJECTED] are acceptable."),
+        USER_ERROR_TASK_ALREADY_CLAIMED("SWE_10002", "Task already claimed by another user.");
+
         private final String code;
         private final String description;
 

@@ -25,12 +25,14 @@ import org.wso2.carbon.identity.workflow.mgt.workflow.WorkFlowExecutor;
 import java.util.List;
 
 /**
- * Implementation of Workflow Executor Interface.
+ * Default implementation of WorkFlowExecutor for handling approval workflows.
  */
-public class DefaultWorkflowExecutor implements WorkFlowExecutor {
+public class DefaultApprovalWorkflowRequestExecutor implements WorkFlowExecutor {
 
-    List<Parameter> parameterList;
-    private static final String EXECUTOR_NAME = "WorkflowEngine";
+    private List<Parameter> parameterList;
+    private static final String EXECUTOR_NAME = "Approval Workflow Engine";
+
+    private final ApprovalTaskService approvalTaskService = new ApprovalTaskServiceImpl();
 
     /**
      *{@inheritDoc}
@@ -56,8 +58,7 @@ public class DefaultWorkflowExecutor implements WorkFlowExecutor {
     @Override
     public void execute(WorkflowRequest request) {
 
-        DefaultWorkflowEventRequest defaultWorkflowEventRequest = new DefaultWorkflowEventRequestService();
-        defaultWorkflowEventRequest.addApproversOfRequests(request, parameterList);
+        approvalTaskService.addApprovalTasksForWorkflowRequest(request, parameterList);
     }
 
     /**

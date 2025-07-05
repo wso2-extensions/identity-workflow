@@ -22,9 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DTO class for task details.
+ * DTO class to represent an approval task.
  */
-public class TaskDataDTO {
+public class ApprovalTaskDTO {
 
     private String id = null;
 

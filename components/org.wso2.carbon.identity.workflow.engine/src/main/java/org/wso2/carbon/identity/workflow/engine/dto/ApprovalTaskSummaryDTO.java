@@ -19,9 +19,9 @@
 package org.wso2.carbon.identity.workflow.engine.dto;
 
 /**
- * DTO class for tasks list.
+ * DTO class to represent a summary of an approval task.
  */
-public class TaskSummaryDTO {
+public class ApprovalTaskSummaryDTO {
 
     private String id = null;
 
