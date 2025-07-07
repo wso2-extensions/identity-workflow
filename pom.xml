@@ -208,7 +208,7 @@
         <maven.findbugsplugin.version>3.0.5</maven.findbugsplugin.version>
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
         <apache.felix.scr.ds.annotations.version>1.2.8</apache.felix.scr.ds.annotations.version>
-        <carbon.identity.framework.version>7.8.266-SNAPSHOT</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.8.276</carbon.identity.framework.version>
         <testng.version>7.4.0</testng.version>
         <mockito.version>3.2.4</mockito.version>
         <h2database.version>2.1.210</h2database.version>
