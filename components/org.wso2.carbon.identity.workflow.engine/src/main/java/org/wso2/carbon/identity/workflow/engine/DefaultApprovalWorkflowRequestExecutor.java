@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.workflow.engine;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineException;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
 import org.wso2.carbon.identity.workflow.mgt.workflow.WorkFlowExecutor;
@@ -33,6 +36,8 @@ public class DefaultApprovalWorkflowRequestExecutor implements WorkFlowExecutor 
     private static final String EXECUTOR_NAME = "Approval Workflow Engine";
 
     private final ApprovalTaskService approvalTaskService = new ApprovalTaskServiceImpl();
+
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultApprovalWorkflowRequestExecutor.class);
 
     /**
      *{@inheritDoc}
@@ -58,7 +63,11 @@ public class DefaultApprovalWorkflowRequestExecutor implements WorkFlowExecutor 
     @Override
     public void execute(WorkflowRequest request) {
 
-        approvalTaskService.addApprovalTasksForWorkflowRequest(request, parameterList);
+        try {
+            approvalTaskService.addApprovalTasksForWorkflowRequest(request, parameterList);
+        } catch (WorkflowEngineException e) {
+            LOG.error("Error while executing approval workflow request: {}", request.getUuid(), e);
+        }
     }
 
     /**

@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagemen
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
+import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.PropertyDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.StateDTO;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineClientException;
@@ -52,19 +53,18 @@ import org.wso2.carbon.identity.workflow.mgt.dao.WorkflowRequestAssociationDAO;
 import org.wso2.carbon.identity.workflow.mgt.dto.Association;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
 import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
+import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowClientException;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_CLAIMED_USERS;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES;
@@ -75,11 +75,8 @@ import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConsta
  */
 public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
-    private static final String PENDING = "PENDING";
-    private static final String APPROVED = "APPROVED";
+     private static final String APPROVED = "APPROVED";
     private static final String REJECTED = "REJECTED";
-    private static final String RELEASED = "RELEASED";
-    private static final String CLAIMED = "CLAIMED";
     private static final Integer LIMIT = 20;
     private static final Integer OFFSET = 0;
     private static final Logger log = LoggerFactory.getLogger(ApprovalTaskServiceImpl.class);
@@ -90,28 +87,39 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private final WSWorkflowCallBackService wsWorkflowCallBackService = new WSWorkflowCallBackService();
 
     @Override
-    public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> status) {
+    public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> status)
+            throws WorkflowEngineException {
 
         String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
 
-        List<String> allTaskIDsList = new ArrayList<>(getAllAssignedTasks(status, userId));
-        List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOList = new ArrayList<>();
-        List<String> workflowRequestIds = new ArrayList<>();
-        for (String taskID : allTaskIDsList) {
-            ApprovalTaskSummaryDTO summeryDTO = new ApprovalTaskSummaryDTO();
-            String requestID = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskID);
-            if (workflowRequestIds.contains(requestID)) {
+        List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(status, userId);
+        List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
+                .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
+                        .equals(approvalTask.getApprovalStatus())).map(ApprovalTaskSummaryDTO::getRequestId)
+                .collect(Collectors.toList());
+        List<String> duplicatedWorkflowRequestIds = new ArrayList<>();
+        Iterator<ApprovalTaskSummaryDTO> iterator = approvalTaskSummaryDTOS.iterator();
+        while (iterator.hasNext()) {
+            ApprovalTaskSummaryDTO approvalTaskSummaryDTO = iterator.next();
+            if (duplicatedWorkflowRequestIds.contains(approvalTaskSummaryDTO.getRequestId())) {
+                iterator.remove();
                 continue;
             }
-            workflowRequestIds.add(requestID);
-            WorkflowRequest request = getWorkflowRequest(requestID);
+            if (reservedWorkflowRequests.contains(approvalTaskSummaryDTO.getRequestId()) &&
+                    !WorkflowEngineConstants.TaskStatus.RESERVED.name()
+                            .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
+                iterator.remove();
+                continue;
+            }
+
+            duplicatedWorkflowRequestIds.add(approvalTaskSummaryDTO.getRequestId());
+
+            WorkflowRequest request = getWorkflowRequest(approvalTaskSummaryDTO.getRequestId());
             TaskDetails taskDetails = getTaskDetails(request);
 
             String eventType = request.getEventType();
 
-            String taskStatus = approvalTaskDAO.getApprovalTaskStatus(taskID);
-            String[] taskStatusValue = taskStatus.split(",", 0);
-            String workflowID = approvalTaskDAO.getWorkflowID(taskID);
+            String workflowID = approvalTaskDAO.getWorkflowID(approvalTaskSummaryDTO.getId());
             String workflowAssociationName = findAssociationNameByWorkflowAndEvent(workflowID, eventType);
 
             Timestamp createdTime = workflowRequestDAO.getCreatedAtTimeInMill(request.getUuid());
@@ -120,16 +128,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             calendar.setTimeInMillis(createdTime.getTime());
             long cal = calendar.getTimeInMillis();
             setCreatedTime(cal);
-            summeryDTO.setId(taskID);
-            summeryDTO.setName(WorkflowEngineConstants.ParameterName.APPROVAL_TASK);
-            summeryDTO.setName(workflowAssociationName);
-            summeryDTO.setTaskType(eventType);
-            summeryDTO.setPresentationName(taskDetails.getTaskSubject());
-            summeryDTO.setPresentationSubject(taskDetails.getTaskDescription());
-            summeryDTO.setCreatedTimeInMillis(String.valueOf(getCreatedTime()));
-            summeryDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
-            summeryDTO.setStatus(ApprovalTaskSummaryDTO.StatusEnum.valueOf(taskStatusValue[0]));
-            approvalTaskSummaryDTOList.add(summeryDTO);
+            approvalTaskSummaryDTO.setId(approvalTaskSummaryDTO.getId());
+            approvalTaskSummaryDTO.setName(WorkflowEngineConstants.ParameterName.APPROVAL_TASK);
+            approvalTaskSummaryDTO.setName(workflowAssociationName);
+            approvalTaskSummaryDTO.setTaskType(eventType);
+            approvalTaskSummaryDTO.setPresentationName(taskDetails.getTaskSubject());
+            approvalTaskSummaryDTO.setPresentationSubject(taskDetails.getTaskDescription());
+            approvalTaskSummaryDTO.setCreatedTimeInMillis(String.valueOf(getCreatedTime()));
+            approvalTaskSummaryDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
+            approvalTaskSummaryDTO.setApprovalStatus(approvalTaskSummaryDTO.getApprovalStatus());
         }
 
         if (limit == null || limit < 0) {
@@ -138,100 +145,75 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         if (offset == null || offset < 0) {
             offset = OFFSET;
         }
-        return approvalTaskSummaryDTOList.subList(Math.min(offset, approvalTaskSummaryDTOList.size()),
-                Math.min(offset + limit, approvalTaskSummaryDTOList.size()));
+        return approvalTaskSummaryDTOS.subList(Math.min(offset, approvalTaskSummaryDTOS.size()),
+                Math.min(offset + limit, approvalTaskSummaryDTOS.size()));
     }
 
     @Override
-    public ApprovalTaskDTO getApprovalTaskByTaskId(String taskId) {
+    public ApprovalTaskDTO getApprovalTaskByTaskId(String taskId) throws WorkflowEngineException {
 
-        try {
-            String[] taskArray = taskId.split(" ", 0);
-            taskId = taskArray[0];
-            String requestId = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
-            WorkflowRequest request = getWorkflowRequest(requestId);
-            TaskDetails taskDetails = getTaskDetails(request);
-            String initiator = workflowRequestDAO.getInitiatedUser(requestId);
-            List<String> approvers = approvalTaskDAO.listApprovers(taskId);
-            Map<String, String> assigneeMap = null;
-            for (String assignee : approvers) {
-                assigneeMap = new HashMap<>();
-                assigneeMap.put(WorkflowEngineConstants.ParameterName.ASSIGNEE_TYPE, assignee);
-            }
-            List<TaskParam> params = getRequestParameters(request);
-            List<PropertyDTO> properties = getPropertyDTOs(params);
-            ApprovalTaskDTO approvalTaskDTO = new ApprovalTaskDTO();
-            approvalTaskDTO.setId(taskId);
-            approvalTaskDTO.setSubject(taskDetails.getTaskSubject());
-            approvalTaskDTO.setDescription(taskDetails.getTaskDescription());
-            String statusValue = setStatusOfTask(taskId);
-            approvalTaskDTO.setApprovalStatus(ApprovalTaskDTO.ApprovalStatusEnum.valueOf(statusValue));
-            approvalTaskDTO.setInitiator(WorkflowEngineConstants.ParameterName.INITIATED_BY + initiator);
-            approvalTaskDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
-            TaskModel taskModel = new TaskModel();
-            taskModel.setAssignees(assigneeMap);
-            approvalTaskDTO.setAssignees(getPropertyDTOs(taskModel.getAssignees()));
-            approvalTaskDTO.setProperties(properties);
-            return approvalTaskDTO;
-        } catch (WorkflowEngineClientException e) {
-            throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_NON_EXISTING_TASK_ID.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_NON_EXISTING_TASK_ID.getDescription());
-        } catch (WorkflowEngineServerException e) {
-            throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_OF_USER.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_OF_USER.
-                            getDescription());
+        String[] taskArray = taskId.split(" ", 0);
+        taskId = taskArray[0];
+        String requestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(taskId);
+        WorkflowRequest request = getWorkflowRequest(requestId);
+        TaskDetails taskDetails = getTaskDetails(request);
+        String initiator = workflowRequestDAO.getInitiatedUser(requestId);
+        List<String> approvers = approvalTaskDAO.listApprovers(taskId);
+        Map<String, String> assigneeMap = null;
+        for (String assignee : approvers) {
+            assigneeMap = new HashMap<>();
+            assigneeMap.put(WorkflowEngineConstants.ParameterName.ASSIGNEE_TYPE, assignee);
+        }
+        List<TaskParam> params = getRequestParameters(request);
+        List<PropertyDTO> properties = getPropertyDTOs(params);
+        ApprovalTaskDTO approvalTaskDTO = new ApprovalTaskDTO();
+        approvalTaskDTO.setId(taskId);
+        approvalTaskDTO.setSubject(taskDetails.getTaskSubject());
+        approvalTaskDTO.setDescription(taskDetails.getTaskDescription());
+        String statusValue = approvalTaskDAO.getApprovalTaskStatus(taskId);
+        approvalTaskDTO.setApprovalStatus(statusValue);
+        approvalTaskDTO.setInitiator(WorkflowEngineConstants.ParameterName.INITIATED_BY + initiator);
+        approvalTaskDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
+        TaskModel taskModel = new TaskModel();
+        taskModel.setAssignees(assigneeMap);
+        approvalTaskDTO.setAssignees(getPropertyDTOs(taskModel.getAssignees()));
+        approvalTaskDTO.setProperties(properties);
+        return approvalTaskDTO;
+    }
+
+    @Override
+    public void updateApprovalTaskStatus(String approvalTaskId, StateDTO nextState) throws WorkflowEngineException {
+
+        validateApprovers(approvalTaskId);
+
+        switch (nextState.getAction()) {
+            case APPROVE:
+                // handleApproval(approvalTaskId);
+                updateStepDetailsOfRequest(approvalTaskId);
+                break;
+            case REJECT:
+                String requestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
+                approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(requestID);
+                completeWorkflowRequest(requestID, REJECTED);
+                break;
+            case RELEASE:
+                handleRelease(approvalTaskId);
+                break;
+            case CLAIM:
+                handleClaim(approvalTaskId);
+                break;
+            default:
+                throw new WorkflowEngineClientException(
+                        WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.
+                                getCode(),
+                        WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.
+                                getDescription());
         }
     }
 
     @Override
-    public void updateApprovalTaskStatus(String taskId, StateDTO nextState) {
-
-        validateApprovers(taskId);
-        try {
-            switch (nextState.getAction()) {
-                case APPROVE:
-                    handleApproval(taskId);
-                    updateStepDetailsOfRequest(taskId);
-                    break;
-                case REJECT:
-                    String eventId = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
-                    handleRejection(taskId);
-                    String requestID = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
-                    List<String> taskIdsOfRequest = approvalTaskDAO.getTaskIds(requestID);
-                    for (String id : taskIdsOfRequest) {
-                        approvalTaskDAO.deleteApproversOfRequest(id);
-                    }
-                    completeRequest(eventId, REJECTED);
-                    break;
-                case RELEASE:
-                    handleRelease(taskId);
-                    break;
-                case CLAIM:
-                    handleClaim(taskId);
-                    break;
-                default:
-                    throw new WorkflowEngineClientException(
-                            WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.
-                                    getCode(),
-                            WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.
-                                    getDescription());
-            }
-        } catch (WorkflowEngineClientException e) {
-            throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_NON_EXISTING_TASK_ID.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_NON_EXISTING_TASK_ID.getDescription());
-        } catch (WorkflowEngineServerException e) {
-            throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_CHANGING_APPROVALS_STATE.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_CHANGING_APPROVALS_STATE.
-                            getDescription());
-        }
-    }
-
-    @Override
-    public void addApprovalTasksForWorkflowRequest(WorkflowRequest workflowRequest, List<Parameter> parameterList) {
+    public void addApprovalTasksForWorkflowRequest(WorkflowRequest workflowRequest, List<Parameter> parameterList)
+            throws WorkflowEngineException {
 
         String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
         String workflowRequestId = getWorkflowRequestId(workflowRequest);
@@ -294,71 +276,54 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private List<String> getAllRequestRelatedUserAndRole() {
-
-        String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        List<String> roleIds = getAssignedRoleIds(userId, tenantDomain);
-        List<String> roleRequestsList;
-        List<String> lst = new ArrayList<>();
-        for (String roleId : roleIds) {
-            roleRequestsList = approvalTaskDAO.getRequestsList(
-                    ENTITY_TYPE_ROLES, roleId);
-            lst.addAll(roleRequestsList);
-        }
-        List<String> userRequestList = approvalTaskDAO.getRequestsList(
-                ENTITY_TYPE_USERS, userId);
-
-        return Stream.concat(lst.stream(), userRequestList.stream()).collect(Collectors.toList());
-    }
-
     /**
-     * Retrieves all task IDs assigned to the user.
+     * Retrieves all the approval tasks assigned to the user.
      *
      * @param status List of task statuses to filter by (e.g., READY, RESERVED).
      * @param userId The ID of the user whose related task IDs should be retrieved.
-     * @return Set of task IDs assigned to the user, filtered by the specified statuses.
+     * @return List of task IDs assigned to the user, filtered by the specified statuses.
      */
-    private Set<String> getAllAssignedTasks(List<String> status, String userId) {
+    private List<ApprovalTaskSummaryDTO> getAllAssignedTasks(List<String> status, String userId)
+            throws WorkflowEngineException {
 
-        Set<String> allTaskIDs = new HashSet<>();
+        List<ApprovalTaskSummaryDTO> allTaskIDs = new ArrayList<>();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
         // Get role-based task IDs
         List<String> roleIds = getAssignedRoleIds(userId, tenantDomain);
         for (String roleId : roleIds) {
-            List<String> tasksAssignedByRole = getTaskIDsByEntity(ENTITY_TYPE_ROLES, roleId, status);
+            List<ApprovalTaskSummaryDTO> tasksAssignedByRole = getTaskIDsByEntity(ENTITY_TYPE_ROLES, roleId, status);
             allTaskIDs.addAll(tasksAssignedByRole);
         }
 
         // Get user-based task IDs.
-        List<String> tasksIDsByUser = getTaskIDsByEntity(ENTITY_TYPE_USERS, userId, status);
+        List<ApprovalTaskSummaryDTO> tasksIDsByUser = getTaskIDsByEntity(ENTITY_TYPE_USERS, userId, status);
         allTaskIDs.addAll(tasksIDsByUser);
 
         // Get task ids of the request that is claimed by the user.
-        List<String> tasksClaimedByUser = getTaskIDsByEntity(ENTITY_TYPE_CLAIMED_USERS, userId, status);
+        List<ApprovalTaskSummaryDTO> tasksClaimedByUser = getTaskIDsByEntity(ENTITY_TYPE_CLAIMED_USERS, userId, status);
         allTaskIDs.addAll(tasksClaimedByUser);
-
         return allTaskIDs;
     }
 
-    private List<String> getTaskIDsByEntity(String entityType, String entityId, List<String> status) {
+    private List<ApprovalTaskSummaryDTO> getTaskIDsByEntity(String entityType, String entityId, List<String> status)
+            throws WorkflowEngineServerException {
 
         if (status == null || status.isEmpty()) {
-            return approvalTaskDAO.getTaskIDList(entityType, entityId);
+            return approvalTaskDAO.getApprovalTaskDetails(entityType, entityId);
         } else {
             return approvalTaskDAO.getTaskIDListByStatus(entityType, entityId, status.get(0));
         }
     }
 
-    private List<String> getAssignedRoleIds(String userId, String tenantDomain) {
+    private List<String> getAssignedRoleIds(String userId, String tenantDomain) throws WorkflowEngineException {
 
         try {
             List<String> roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().
                     getRoleIdListOfUser(userId, tenantDomain);
             return new ArrayList<>(roleIDList);
         } catch (IdentityRoleManagementException e) {
-            throw new WorkflowEngineClientException(
+            throw new WorkflowEngineException(
                     WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER
                             .getCode(),
                     WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.
@@ -377,23 +342,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         this.localCreatedTime = param;
     }
 
-    private String setStatusOfTask(String taskId) {
-
-        String status = approvalTaskDAO.getApprovalTaskStatus(taskId);
-        String statusValue;
-        if (status.equals(String.valueOf(WorkflowEngineConstants.TaskStatus.RESERVED))) {
-            statusValue = PENDING;
-        } else if (status.equals(String.valueOf(WorkflowEngineConstants.TaskStatus.READY))) {
-            statusValue = PENDING;
-        } else if (status.equals(String.valueOf(WorkflowEngineConstants.TaskStatus.COMPLETED))) {
-            statusValue = APPROVED;
-        } else {
-            statusValue = REJECTED;
-        }
-        return statusValue;
-    }
-
-    private WorkflowRequest getWorkflowRequest(String requestId) {
+    private WorkflowRequest getWorkflowRequest(String requestId) throws WorkflowEngineException {
 
         try {
             return WorkflowEngineServiceDataHolder.getInstance().getWorkflowManagementService()
@@ -406,44 +355,54 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private void updateStepDetailsOfRequest(String taskId) {
+    private void updateStepDetailsOfRequest(String approvalTaskId) throws WorkflowEngineException {
 
-        String eventId = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
-        WorkflowRequest request = getWorkflowRequest(eventId);
-        List<Parameter> parameterList = getParameterList(request);
-        String workflowId = approvalTaskDAO.getWorkflowID(taskId);
-        String requestID = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
-        List<String> taskIdsOfRequest = approvalTaskDAO.getTaskIds(requestID);
-        for (String task : taskIdsOfRequest) {
-            approvalTaskDAO.deleteApproversOfRequest(task);
-        }
+        String workflowRequestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
+        WorkflowRequest workflowRequest = getWorkflowRequest(workflowRequestId);
+        List<Parameter> parameterList = getParameterList(workflowRequest);
+        String workflowId = approvalTaskDAO.getWorkflowID(approvalTaskId);
+        approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(workflowRequestId);
 
-        int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(eventId, workflowId);
-        if (stepValue < numOfStates(request)) {
-            addApprovalTasksForWorkflowRequest(request, parameterList);
+        int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
+        if (stepValue < numOfStates(workflowRequest)) {
+            addApprovalTasksForWorkflowRequest(workflowRequest, parameterList);
         } else {
-            completeRequest(eventId, ApprovalTaskServiceImpl.APPROVED);
+            completeWorkflowRequest(workflowRequestId, ApprovalTaskServiceImpl.APPROVED);
         }
     }
 
-    private void validateApprovers(String taskId) {
+    private void validateApprovers(String taskId) throws WorkflowEngineException {
 
-        List<String> eventList = getAllRequestRelatedUserAndRole();
-        List<String> taskList;
-        List<String> lst = new ArrayList<>();
-        for (String event : eventList) {
-            taskList = approvalTaskDAO.getTaskIds(event);
-            lst.addAll(taskList);
-        }
+        String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
-        for (String task : lst) {
-            if (taskId.equals(task)) {
-                return;
+        boolean isAssignedApprovalTask = false;
+        ApproverDTO approverDTO = approvalTaskDAO.getApproverDetailForApprovalTask(taskId);
+        if (ENTITY_TYPE_USERS.equals(approverDTO.getApproverType()) ||
+                ENTITY_TYPE_CLAIMED_USERS.equals(approverDTO.getApproverType())) {
+            if (approverDTO.getApproverName().equals(userId)) {
+                isAssignedApprovalTask = true;
+            }
+        } else {
+            List<String> roleIds = getAssignedRoleIds(userId, tenantDomain);
+            if (roleIds.contains(approverDTO.getApproverName())) {
+                isAssignedApprovalTask = true;
             }
         }
+        if (!isAssignedApprovalTask) {
+            throw new WorkflowEngineClientException(
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED.getCode(),
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED.
+                            getDescription());
+        }
+        if (WorkflowEngineConstants.TaskStatus.BLOCKED.name().equals(approvalTaskDAO.getApprovalTaskStatus(taskId))) {
+            throw new WorkflowEngineClientException(
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getCode(),
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getDescription());
+        }
     }
 
-    private int numOfStates(WorkflowRequest request) {
+    private int numOfStates(WorkflowRequest request) throws WorkflowEngineException {
 
         List<Parameter> parameterList = getParameterList(request);
         int maxStep = 0;
@@ -471,8 +430,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     private void handleApproval(String taskId) throws WorkflowEngineServerException {
 
-        String requestID = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
-        List<String> taskIds = approvalTaskDAO.getTaskIds(requestID);
+        String requestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(taskId);
+        List<String> taskIds = approvalTaskDAO.getApprovalTasksByWorkflowRequestId(requestID);
         String completedStatus = WorkflowEngineConstants.TaskStatus.COMPLETED.toString();
 
         for (String id : taskIds) {
@@ -480,73 +439,66 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private void handleRejection(String taskId) throws WorkflowEngineServerException {
-
-        String rejectedStatus = WorkflowEngineConstants.TaskStatus.COMPLETED + "," + REJECTED;
-        approvalTaskDAO.updateApprovalTaskStatus(taskId, rejectedStatus);
-    }
-
     private void handleRelease(String taskId) throws WorkflowEngineServerException {
 
         String readyStatus = WorkflowEngineConstants.TaskStatus.READY.toString();
-        String requestID = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
+        String requestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(taskId);
         String approverType = approvalTaskDAO.getApproverType(taskId);
-        List<String> taskIds = approvalTaskDAO.getTaskIds(requestID);
+        List<String> taskIds = approvalTaskDAO.getApprovalTasksByWorkflowRequestId(requestID);
 
         for (String id : taskIds) {
             approvalTaskDAO.updateApprovalTaskStatus(id, readyStatus);
 
             if (taskId.equals(id) && ENTITY_TYPE_CLAIMED_USERS.equals(approverType)) {
-                approvalTaskDAO.deleteApproversOfRequest(id);
+                approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(id);
             }
         }
     }
 
-    private void handleClaim(String taskId) throws WorkflowEngineServerException {
+    private void handleClaim(String updatedApprovalTaskId) throws WorkflowEngineException {
 
         String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
         String reservedStatus = WorkflowEngineConstants.TaskStatus.RESERVED.toString();
         String blockedStatus = WorkflowEngineConstants.TaskStatus.BLOCKED.toString();
 
-        if (blockedStatus.equals(approvalTaskDAO.getApprovalTaskStatus(taskId))) {
+        if (blockedStatus.equals(approvalTaskDAO.getApprovalTaskStatus(updatedApprovalTaskId))) {
             throw new WorkflowEngineClientException(
                     WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getCode(),
                     WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getDescription());
         }
 
-        String workflowRequestID = approvalTaskDAO.getWorkflowRequestIdByTaskId(taskId);
-        String approverType = approvalTaskDAO.getApproverType(taskId);
-        String workflowId = approvalTaskDAO.getWorkflowID(taskId);
-        List<String> existingTaskIds = approvalTaskDAO.getTaskIds(workflowRequestID);
+        String workflowRequestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(updatedApprovalTaskId);
+        String approverType = approvalTaskDAO.getApproverType(updatedApprovalTaskId);
+        String workflowId = approvalTaskDAO.getWorkflowID(updatedApprovalTaskId);
+        List<String> existingApprovalTasks = approvalTaskDAO.getApprovalTasksByWorkflowRequestId(workflowRequestID);
 
-        for (String existingTaskId : existingTaskIds) {
-            if (existingTaskId.equals(taskId)) {
+        for (String existingApprovalTaskId : existingApprovalTasks) {
+            if (existingApprovalTaskId.equals(updatedApprovalTaskId)) {
                 if (WorkflowEngineConstants.APPROVER_TYPE_USERS.equals(approverType)) {
-                    approvalTaskDAO.updateApprovalTaskStatus(taskId, reservedStatus);
+                    approvalTaskDAO.updateApprovalTaskStatus(updatedApprovalTaskId, reservedStatus);
                 } else if (WorkflowEngineConstants.APPROVER_TYPE_ROLES.equals(approverType)) {
                     String newTaskId = UUID.randomUUID().toString();
                     approvalTaskDAO.addApproversOfRequest(newTaskId, workflowRequestID, workflowId,
                             ENTITY_TYPE_CLAIMED_USERS, userId, reservedStatus);
                     approvalTaskDAO.updateApprovalTaskStatus(newTaskId, reservedStatus);
-                    approvalTaskDAO.updateApprovalTaskStatus(taskId, blockedStatus);
+                    approvalTaskDAO.updateApprovalTaskStatus(updatedApprovalTaskId, blockedStatus);
                 }
             } else {
-                approvalTaskDAO.updateApprovalTaskStatus(taskId, blockedStatus);
+                approvalTaskDAO.updateApprovalTaskStatus(existingApprovalTaskId, blockedStatus);
             }
         }
     }
 
-    private void completeRequest(String eventId, String status) {
+    private void completeWorkflowRequest(String workflowRequestId, String status) throws WorkflowEngineServerException {
 
         WSWorkflowResponse wsWorkflowResponse = new WSWorkflowResponse();
-        String relationshipId = workflowRequestDAO.getRelationshipId(eventId);
+        String relationshipId = workflowRequestDAO.getRelationshipId(workflowRequestId);
         wsWorkflowResponse.setUuid(relationshipId);
         wsWorkflowResponse.setStatus(status);
         wsWorkflowCallBackService.onCallback(wsWorkflowResponse);
-        // workflowEventRequestHandler.deleteStateOfRequest(eventId);
     }
 
-    private TaskDetails getTaskDetails(WorkflowRequest workflowRequest) {
+    private TaskDetails getTaskDetails(WorkflowRequest workflowRequest) throws WorkflowEngineException {
 
         List<Parameter> parameterList = getParameterList(workflowRequest);
         TaskDetails taskDetails = new TaskDetails();
@@ -561,7 +513,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         return taskDetails;
     }
 
-    private List<Parameter> getParameterList(WorkflowRequest request) {
+    private List<Parameter> getParameterList(WorkflowRequest request) throws WorkflowEngineException {
 
         List<WorkflowAssociation> associations = getAssociations(request);
         List<Parameter> parameterList = null;
@@ -629,7 +581,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         return null;
     }
 
-    public String getWorkflowId(WorkflowRequest request) {
+    public String getWorkflowId(WorkflowRequest request) throws WorkflowEngineException {
 
         WorkflowManagementService workflowManagementService = new WorkflowManagementServiceImpl();
         List<WorkflowAssociation> associations = getAssociations(request);
@@ -638,10 +590,12 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             try {
                 Workflow workflow = workflowManagementService.getWorkflow(association.getWorkflowId());
                 workflowId = workflow.getWorkflowId();
-            } catch (WorkflowException e) {
+            } catch (WorkflowClientException e) {
                 throw new WorkflowEngineClientException(
-                        WorkflowEngineConstants.ErrorMessages.ASSOCIATION_NOT_FOUND.getCode(),
+                        WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getCode(),
                         WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getDescription());
+            } catch (WorkflowException e) {
+                throw new WorkflowEngineServerException(e.getErrorCode(), e.getMessage());
             }
         }
         return workflowId;

@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.workflow.engine.internal.dao;
 
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
+import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
+import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
+
 import java.util.List;
 
 /**
@@ -36,30 +40,30 @@ public interface ApprovalTaskDAO {
      * @param taskStatus   state of the tasks [RESERVED, READY or COMPLETED].
      */
     void addApproversOfRequest(String taskId, String eventId, String workflowId, String approverType,
-                               String approverName, String taskStatus);
+                               String approverName, String taskStatus) throws WorkflowEngineServerException;
 
     /**
-     * Get taskId from table.
+     * Return ths approval task details given the approval task ID.
      *
-     * @param eventId the request ID that need to be checked.
-     * @return task Id.
+     * @param approvalTaskId the request ID that need to be checked.
+     * @return The approver details corresponding to the approval task ID.
      */
-    String getApproversOfRequest(String eventId);
+    ApproverDTO getApproverDetailForApprovalTask(String approvalTaskId) throws WorkflowEngineServerException;
 
     /**
-     * Delete approver details using task Id.
+     * Delete approval tasks correspond to the given workflow request ID.
      *
-     * @param taskId random generated unique Id.
+     * @param workflowRequestId The workflow request ID that need to be checked.
      */
-    void deleteApproversOfRequest(String taskId);
+    void deleteApprovalTasksOfWorkflowRequest(String workflowRequestId) throws WorkflowEngineServerException;
 
     /**
      * Add what step to approve.
      *
-     * @param eventId     the request ID that need to be checked.
-     * @param workflowId  workflow ID.
+     * @param eventId    the request ID that need to be checked.
+     * @param workflowId workflow ID.
      */
-    void addApprovalTaskStep(String eventId, String workflowId);
+    void addApprovalTaskStep(String eventId, String workflowId) throws WorkflowEngineServerException;
 
     /**
      * Returns the current step given the event ID and workflow ID.
@@ -68,7 +72,8 @@ public interface ApprovalTaskDAO {
      * @param workflowId workflow ID.
      * @return current step value.
      */
-    int getCurrentApprovalStepOfWorkflowRequest(String requestId, String workflowId);
+    int getCurrentApprovalStepOfWorkflowRequest(String requestId, String workflowId)
+            throws WorkflowEngineServerException;
 
     /**
      * Updates a state of request given the event ID, workflow ID and current step.
@@ -77,52 +82,36 @@ public interface ApprovalTaskDAO {
      * @param workflowId  workflow ID.
      * @param currentStep the current step.
      */
-    void updateStateOfRequest(String eventId, String workflowId, int currentStep);
+    void updateStateOfRequest(String eventId, String workflowId, int currentStep) throws WorkflowEngineServerException;
 
     /**
-     * Returns the request ID given the task ID.
+     * Returns the workflow request ID of the given approval task ID.
      *
-     * @param taskId random generated unique Id.
-     * @return request Id.
+     * @param approvalTaskId The approval task ID that need to be checked.
+     * @return Workflow request ID.
      */
-    String getWorkflowRequestIdByTaskId(String taskId);
-
+    String getWorkflowRequestIdByApprovalTaskId(String approvalTaskId) throws WorkflowEngineServerException;
 
     /**
-     * Returns the events list according to the user.
-     *
-     * @param approverName admin user.
-     * @return events list.
-     */
-    List<String> getRequestsList(String approverName);
-
-    /**
-     * Returns the events list according to the user and type.
+     * Returns the approval task details given the approver type and name.
      *
      * @param approverType entity type.
      * @param approverName entity value.
      * @return events list.
      */
-    List<String> getRequestsList(String approverType, String approverName);
+    List<ApprovalTaskSummaryDTO> getApprovalTaskDetails(String approverType, String approverName)
+            throws WorkflowEngineServerException;
 
     /**
-     * Returns the task id list according to the user and type.
-     *
-     * @param approverType entity type.
-     * @param approverName entity value.
-     * @return events list.
-     */
-    List<String> getTaskIDList(String approverType, String approverName);
-
-    /**
-     * Returns the task id list according to the user, type and status.
+     * Returns the approval task details given the approver type, name and status.
      *
      * @param approverType entity type.
      * @param approverName entity value.
      * @param status       request status
      * @return events list.
      */
-    List<String> getTaskIDListByStatus(String approverType, String approverName, String status);
+    List<ApprovalTaskSummaryDTO> getTaskIDListByStatus(String approverType, String approverName, String status)
+            throws WorkflowEngineServerException;
 
     /**
      * Returns the approval task status given the task ID [RESERVED, READY or COMPLETED].
@@ -130,7 +119,7 @@ public interface ApprovalTaskDAO {
      * @param taskId the task ID that need to be checked.
      * @return task Status.
      */
-    String getApprovalTaskStatus(String taskId);
+    String getApprovalTaskStatus(String taskId) throws WorkflowEngineServerException;
 
     /**
      * Update the task status given the task ID.
@@ -138,7 +127,7 @@ public interface ApprovalTaskDAO {
      * @param taskId     the task ID that need to be checked.
      * @param taskStatus state of the tasks [RESERVED, READY or COMPLETED].
      */
-    void updateApprovalTaskStatus(String taskId, String taskStatus);
+    void updateApprovalTaskStatus(String taskId, String taskStatus) throws WorkflowEngineServerException;
 
     /**
      * Returns the approvers list given the authenticated approver name.
@@ -146,7 +135,7 @@ public interface ApprovalTaskDAO {
      * @param taskId the task ID that need to be checked.
      * @return approvers list.
      */
-    List<String> listApprovers(String taskId);
+    List<String> listApprovers(String taskId) throws WorkflowEngineServerException;
 
     /**
      * Returns the approver type given the task ID.
@@ -154,15 +143,15 @@ public interface ApprovalTaskDAO {
      * @param taskId the task ID that need to be checked.
      * @return approver type.
      */
-    String getApproverType(String taskId);
+    String getApproverType(String taskId) throws WorkflowEngineServerException;
 
     /**
-     * Retrieve the task list giving event ID.
+     * Retrieve the approval tasks corresponding to a workflow request ID.
      *
-     * @param eventId the request ID that need to be checked.
-     * @return tasks list.
+     * @param workflowRequestId the workflow request ID that need to be checked.
+     * @return approval tasks.
      */
-    List<String> getTaskIds(String eventId);
+    List<String> getApprovalTasksByWorkflowRequestId(String workflowRequestId) throws WorkflowEngineServerException;
 
     /**
      * Retrieve the workflow ID giving task ID.
@@ -170,7 +159,7 @@ public interface ApprovalTaskDAO {
      * @param taskId the task ID that need to be checked.
      * @return workflow ID.
      */
-    String getWorkflowID(String taskId);
+    String getWorkflowID(String taskId) throws WorkflowEngineServerException;
 
 }
 

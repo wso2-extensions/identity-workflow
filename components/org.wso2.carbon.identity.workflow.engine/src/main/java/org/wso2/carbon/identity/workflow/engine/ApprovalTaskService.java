@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.workflow.engine;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.StateDTO;
+import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineException;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
 
@@ -40,7 +41,8 @@ public interface ApprovalTaskService {
      * @param status state of the tasks [RESERVED, READY or COMPLETED].
      * @return ApprovalTaskSummaryDTO list.
      */
-    List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> status);
+    List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> status)
+            throws WorkflowEngineException;
 
     /**
      * Get details of a task identified by the taskId.
@@ -48,17 +50,16 @@ public interface ApprovalTaskService {
      * @param taskId the unique ID.
      * @return ApprovalTaskDTO object.
      */
-    ApprovalTaskDTO getApprovalTaskByTaskId(String taskId);
+    ApprovalTaskDTO getApprovalTaskByTaskId(String taskId) throws WorkflowEngineException;
 
     /**
-     * Update the state of a task identified by the task id.
-     * User can get assigned a task by claiming or releasing an already assigned task to himself.
-     * Or user can approve or reject a task.
+     * Update the state of an approval task. User can get assigned a task by claiming or releasing an already assigned
+     * task to himself or user can approve or reject a task.
      *
-     * @param taskId    the unique ID to update the state.
-     * @param nextState event status.
+     * @param approvalTaskId    the unique ID to update the state.
+     * @param nextState The next status of the approval task.
      */
-    void updateApprovalTaskStatus(String taskId, StateDTO nextState);
+    void updateApprovalTaskStatus(String approvalTaskId, StateDTO nextState) throws WorkflowEngineException;
 
     /**
      * Add approval tasks for a workflow request.
@@ -66,5 +67,6 @@ public interface ApprovalTaskService {
      * @param workflowRequest the workflow request to which the approval tasks are added.
      * @param parameterList   list of parameters associated with the workflow request.
      */
-    void addApprovalTasksForWorkflowRequest(WorkflowRequest workflowRequest, List<Parameter> parameterList);
+    void addApprovalTasksForWorkflowRequest(WorkflowRequest workflowRequest, List<Parameter> parameterList)
+            throws WorkflowEngineException;
 }

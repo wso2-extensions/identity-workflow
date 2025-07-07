@@ -19,7 +19,7 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
     private static final Log log = LogFactory.getLog(WorkflowRequestDAOImpl.class.getName());
 
     @Override
-    public String getRelationshipId(String requestId) {
+    public String getRelationshipId(String requestId) throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String taskStatus;
@@ -41,7 +41,7 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
     }
 
     @Override
-    public String getInitiatedUser(String requestId) {
+    public String getInitiatedUser(String requestId) throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         String createdBy;
@@ -63,7 +63,7 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
     }
 
     @Override
-    public Timestamp getCreatedAtTimeInMill(String requestId) {
+    public Timestamp getCreatedAtTimeInMill(String requestId) throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         java.sql.Timestamp createdTime;

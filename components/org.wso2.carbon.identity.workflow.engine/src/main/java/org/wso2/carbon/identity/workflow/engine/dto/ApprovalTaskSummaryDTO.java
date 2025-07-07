@@ -33,14 +33,9 @@ public class ApprovalTaskSummaryDTO {
 
     private String taskType = null;
 
-    /**
-     * Represents the various statuses in an approval task's lifecycle.
-     */
-    public enum StatusEnum {
-        READY, RESERVED, COMPLETED, BLOCKED
-    }
+    private String requestId = null;
 
-    private StatusEnum status = null;
+    private String approvalStatus = null;
 
     private String priority = null;
 
@@ -127,19 +122,19 @@ public class ApprovalTaskSummaryDTO {
     }
 
     /**
-     * State of the Approval task
+     * get the status of the approval task.
      **/
-    public StatusEnum getStatus() {
+    public String getApprovalStatus() {
 
-        return status;
+        return approvalStatus;
     }
 
     /**
-     * Set state of the Approval task
+     * Set the status of the approval task.
      **/
-    public void setStatus(StatusEnum status) {
+    public void setApprovalStatus(String approvalStatus) {
 
-        this.status = status;
+        this.approvalStatus = approvalStatus;
     }
 
     /**
@@ -174,6 +169,16 @@ public class ApprovalTaskSummaryDTO {
         this.createdTimeInMillis = createdTimeInMillis;
     }
 
+    public String getRequestId() {
+
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+
+        this.requestId = requestId;
+    }
+
     @Override
     public String toString() {
 
@@ -184,7 +189,7 @@ public class ApprovalTaskSummaryDTO {
         sb.append("  presentationSubject: ").append(presentationSubject).append("\n");
         sb.append("  presentationName: ").append(presentationName).append("\n");
         sb.append("  taskType: ").append(taskType).append("\n");
-        sb.append("  status: ").append(status).append("\n");
+        sb.append("  approvalStatus: ").append(approvalStatus).append("\n");
         sb.append("  priority: ").append(priority).append("\n");
         sb.append("  createdTimeInMillis: ").append(createdTimeInMillis).append("\n");
         sb.append("}\n");

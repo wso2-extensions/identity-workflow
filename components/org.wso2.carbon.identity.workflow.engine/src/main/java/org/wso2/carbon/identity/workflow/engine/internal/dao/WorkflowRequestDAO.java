@@ -17,6 +17,8 @@
  */
 package org.wso2.carbon.identity.workflow.engine.internal.dao;
 
+import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
+
 import java.sql.Timestamp;
 
 /**
@@ -30,7 +32,7 @@ public interface WorkflowRequestDAO {
      * @param requestId the event ID that need to be checked.
      * @return the relationship ID.
      */
-    String getRelationshipId(String requestId);
+    String getRelationshipId(String requestId) throws WorkflowEngineServerException;
 
     /**
      * Returns the initiator given the request ID.
@@ -38,7 +40,7 @@ public interface WorkflowRequestDAO {
      * @param requestId the request ID that need to be checked.
      * @return string initiator.
      */
-    String getInitiatedUser(String requestId);
+    String getInitiatedUser(String requestId) throws WorkflowEngineServerException;
 
     /**
      * Returns the created time of the request.
@@ -46,5 +48,5 @@ public interface WorkflowRequestDAO {
      * @param requestId the request ID that need to be checked.
      * @return the created time.
      */
-    Timestamp getCreatedAtTimeInMill(String requestId);
+    Timestamp getCreatedAtTimeInMill(String requestId) throws WorkflowEngineServerException;
 }
