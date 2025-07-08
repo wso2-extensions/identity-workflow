@@ -16,33 +16,33 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.workflow.engine.exception;
+package org.wso2.carbon.identity.workflow.engine.dto;
 
 /**
- * Base exception for handling workflow engine exceptions.
+ * DTO class to represent an approver in the workflow engine.
  */
-public class WorkflowEngineException extends Exception {
+public class ApproverDTO {
 
-    private String errorCode;
+    private String approverName;
+    private String approverType;
 
-    public WorkflowEngineException(String message, String errorCode) {
+    public String getApproverName() {
 
-        super(message);
-        this.errorCode = errorCode;
+        return approverName;
     }
 
-    public WorkflowEngineException(String message, Throwable cause) {
+    public void setApproverName(String approverName) {
 
-        super(message, cause);
+        this.approverName = approverName;
     }
 
-    /**
-     * Returns the error code.
-     *
-     * @return Error code.
-     */
-    public String getErrorCode() {
+    public String getApproverType() {
 
-        return errorCode;
+        return approverType;
+    }
+
+    public void setApproverType(String approverType) {
+
+        this.approverType = approverType;
     }
 }

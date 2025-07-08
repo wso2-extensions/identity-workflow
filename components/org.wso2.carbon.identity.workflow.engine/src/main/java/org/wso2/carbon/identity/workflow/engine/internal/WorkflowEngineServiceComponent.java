@@ -26,10 +26,10 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
-import org.wso2.carbon.identity.workflow.engine.ApprovalEventService;
+import org.wso2.carbon.identity.workflow.engine.ApprovalTaskServiceImpl;
 import org.wso2.carbon.identity.workflow.engine.DefaultApprovalWorkflow;
+import org.wso2.carbon.identity.workflow.engine.DefaultApprovalWorkflowRequestExecutor;
 import org.wso2.carbon.identity.workflow.engine.DefaultTemplateInitializer;
-import org.wso2.carbon.identity.workflow.engine.DefaultWorkflowExecutor;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.workflow.AbstractWorkflow;
 
@@ -53,9 +53,9 @@ public class WorkflowEngineServiceComponent {
         BundleContext bundleContext = context.getBundleContext();
         bundleContext.registerService(AbstractWorkflow.class,
                 new DefaultApprovalWorkflow(DefaultTemplateInitializer.class,
-                DefaultWorkflowExecutor.class, getMetaDataXML()), null);
-        ApprovalEventService approvalEventService = new ApprovalEventService();
-        bundleContext.registerService(ApprovalEventService.class, approvalEventService, null);
+                DefaultApprovalWorkflowRequestExecutor.class, getMetaDataXML()), null);
+        ApprovalTaskServiceImpl approvalTaskServiceImpl = new ApprovalTaskServiceImpl();
+        bundleContext.registerService(ApprovalTaskServiceImpl.class, approvalTaskServiceImpl, null);
     }
 
     private String getMetaDataXML() {
