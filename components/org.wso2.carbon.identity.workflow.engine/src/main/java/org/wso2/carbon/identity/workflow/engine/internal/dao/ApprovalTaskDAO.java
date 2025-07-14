@@ -99,7 +99,7 @@ public interface ApprovalTaskDAO {
      * @param approverName entity value.
      * @return events list.
      */
-    List<ApprovalTaskSummaryDTO> getApprovalTaskDetails(String approverType, String approverName)
+    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(String approverType, String approverName)
             throws WorkflowEngineServerException;
 
     /**
@@ -107,10 +107,11 @@ public interface ApprovalTaskDAO {
      *
      * @param approverType entity type.
      * @param approverName entity value.
-     * @param status       request status
+     * @param statusList       request status
      * @return events list.
      */
-    List<ApprovalTaskSummaryDTO> getTaskIDListByStatus(String approverType, String approverName, String status)
+    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(String approverType, String approverName,
+                                                                    List<String> statusList)
             throws WorkflowEngineServerException;
 
     /**
