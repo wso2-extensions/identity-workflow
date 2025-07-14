@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -195,20 +196,20 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     public List<String> listApprovers(String taskId) throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        List<String> requestsList;
+        List<String> approversList;
         try {
-            requestsList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
+            approversList = jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
                             GET_APPROVER_NAME_RELATED_TO_CURRENT_TASK_ID, (resultSet, rowNumber) ->
                             resultSet.getString(WorkflowEngineConstants.APPROVER_NAME_COLUMN),
                     preparedStatement -> preparedStatement.setString(1, taskId));
         } catch (DataAccessException e) {
-            String errorMessage = "Error occurred while retrieving approvers";
+            String errorMessage = "Error occurred while retrieving approvers.";
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
             throw new WorkflowEngineServerException(errorMessage, e);
         }
-        return requestsList;
+        return approversList;
     }
 
     @Override
@@ -253,7 +254,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
         return requestId;
     }
 
-    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetails(String approverType, String approverName)
+    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(String approverType, String approverName)
             throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
@@ -283,13 +284,16 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     }
 
 
-    public List<ApprovalTaskSummaryDTO> getTaskIDListByStatus(String approverType, String approverName, String status)
+    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(String approverType, String approverName,
+                                                                           List<String> statusList)
             throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
-            return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUS,
+            String statusPlaceholders = String.join(", ", Collections.nCopies(statusList.size(), "?"));
+            String query = String.format(WorkflowEngineConstants.SqlQueries
+                    .GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES, statusPlaceholders);
+            return jdbcTemplate.executeQuery(query,
                     (resultSet, rowNumber) -> {
                         ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
                         approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
@@ -301,7 +305,9 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                     preparedStatement -> {
                         preparedStatement.setString(1, approverName);
                         preparedStatement.setString(2, approverType);
-                        preparedStatement.setString(3, status);
+                        for (int i = 3; i < statusList.size(); i++) {
+                            preparedStatement.setString(i, statusList.get(i));
+                        }
                     });
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving task id from" +
@@ -386,9 +392,9 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     public String getWorkflowID(String taskId) throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String taskStatus;
+        String workflowId;
         try {
-            taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
+            workflowId = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
                             GET_WORKFLOW_ID,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.WORKFLOW_ID))),
@@ -401,7 +407,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
             }
             throw new WorkflowEngineServerException(errorMessage, e);
         }
-        return taskStatus;
+        return workflowId;
     }
 
     private void setPreparedStatementForStatusOfRequest(String taskStatus, String taskId,
