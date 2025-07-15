@@ -305,13 +305,13 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                     preparedStatement -> {
                         preparedStatement.setString(1, approverName);
                         preparedStatement.setString(2, approverType);
-                        for (int i = 3; i < statusList.size(); i++) {
-                            preparedStatement.setString(i, statusList.get(i));
+                        for (int i = 0; i < statusList.size(); i++) {
+                            preparedStatement.setString(i + 3, statusList.get(i));
                         }
                     });
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving task id from" +
-                    "approver name: %s" + " of approver type: %s", approverName, approverType);
+                    "approver name: %s of approver type: %s", approverName, approverType);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
