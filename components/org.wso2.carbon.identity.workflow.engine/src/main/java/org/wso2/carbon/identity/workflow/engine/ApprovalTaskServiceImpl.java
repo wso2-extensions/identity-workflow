@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.workflow.engine;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.context.CarbonContext;
@@ -482,6 +483,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         List<Parameter> parameterList = getParameterList(workflowRequest);
         TaskDetails taskDetails = new TaskDetails();
+        if (CollectionUtils.isEmpty(parameterList)) {
+            return taskDetails;
+        }
         for (Parameter parameter : parameterList) {
             if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.TASK_SUBJECT)) {
                 taskDetails.setTaskSubject(parameter.getParamValue());
