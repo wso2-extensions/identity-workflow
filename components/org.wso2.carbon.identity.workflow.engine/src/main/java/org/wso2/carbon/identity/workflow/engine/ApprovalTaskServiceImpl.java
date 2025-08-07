@@ -22,6 +22,9 @@ import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
@@ -68,6 +71,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants.DISPLAY_NAME_PROPERTY;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.CLAIMS_PROPERTY_NAME;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.CLAIMS_UI_PROPERTY_NAME;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_CLAIMED_USERS;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS;
@@ -86,6 +92,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private final ApprovalTaskDAO approvalTaskDAO = new ApprovalTaskDAOImpl();
     private final WorkflowRequestDAO workflowRequestDAO = new WorkflowRequestDAOImpl();
     private final WSWorkflowCallBackService wsWorkflowCallBackService = new WSWorkflowCallBackService();
+    private final ClaimMetadataManagementServiceImpl claimMetadataManagementService =
+            new ClaimMetadataManagementServiceImpl();
+
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
@@ -540,8 +549,61 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     private List<PropertyDTO> getPropertyDTOs(List<TaskParam> props) {
 
-        return props.stream().map(p -> getPropertyDTO(p.getItemName(), p.getItemValue()))
+        List<PropertyDTO> propertyDTO = props.stream().map(p -> getPropertyDTO(p.getItemName(), p.getItemValue()))
                 .collect(Collectors.toList());
+
+        // Check if the claim property exists in the properties list and add new claim_UI property.
+        propertyDTO.stream().filter(property -> CLAIMS_PROPERTY_NAME.equalsIgnoreCase((property.getKey()))).findFirst().
+                ifPresent(claimProperty -> {
+                    PropertyDTO claimUIProperty = new PropertyDTO();
+                    claimUIProperty.setKey(CLAIMS_UI_PROPERTY_NAME);
+                    claimUIProperty.setValue(getClaimsDisplayNames(claimProperty.getValue()));
+                    propertyDTO.add(claimUIProperty);
+                });
+
+        return propertyDTO;
+    }
+
+    private String getClaimsDisplayNames(String claims) {
+
+        StringBuilder claimDisplayNames = new StringBuilder();
+
+        // Remove the square brackets and split the claims by comma.
+        if (claims.startsWith("{") && claims.endsWith("}")) {
+            claims = claims.substring(1, claims.length() - 1);
+        }
+
+        // Split the claims by comma and iterate through each claim.
+        String[] claimArray = claims.split(",");
+
+        List<LocalClaim> localClaims;
+        try {
+            localClaims = claimMetadataManagementService.getLocalClaims(
+                            CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        } catch (ClaimMetadataException e) {
+            log.error("Error while retrieving local claims for tenant: {}",
+                    CarbonContext.getThreadLocalCarbonContext().getTenantDomain(), e);
+            return claims; // Return original claims if unable to retrieve local claims.
+        }
+
+        for (String claim: claimArray) {
+            String[] claimParts = claim.split("=");
+            String claimUri = claimParts[0].trim();
+            String claimValue = claimParts[1].trim();
+
+            String displayName = localClaims.stream()
+                            .filter(localClaim -> localClaim.getClaimURI().equals(claimUri))
+                            .map(localClaim -> localClaim.getClaimProperty(DISPLAY_NAME_PROPERTY))
+                            .findFirst()
+                            .orElse(claimUri);
+            claimDisplayNames.append(displayName).append("=").append(claimValue).append(", ");
+        }
+
+        // Remove the last comma and space if present.
+        if (claimDisplayNames.length() > 0) {
+            claimDisplayNames.setLength(claimDisplayNames.length() - 2);
+        }
+        return claimDisplayNames.toString();
     }
 
     private PropertyDTO getPropertyDTO(String key, String value) {
