@@ -336,7 +336,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                     userId = optionalUserId.get();
                 }
             } catch (OrganizationManagementException e) {
-                throw new RuntimeException(e);
+                throw new WorkflowEngineException(
+                        WorkflowEngineConstants.ErrorMessages.ERROR_RETRIEVING_ASSOCIATED_USER_ID.getDescription(), e);
             }
         }
         try {
@@ -345,10 +346,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             return new ArrayList<>(roleIDList);
         } catch (IdentityRoleManagementException e) {
             throw new WorkflowEngineException(
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER
-                            .getCode(),
                     WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.
-                            getDescription());
+                            getDescription(), e);
         }
 
     }
