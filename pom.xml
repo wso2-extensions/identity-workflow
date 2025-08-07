@@ -151,7 +151,7 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
-                <version>2.0.3</version>
+                <version>${org.wso2.identity.organization.mgt.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.workflow</groupId>
@@ -221,6 +221,7 @@
         <osgi.framework.import.version.range>[1.2.0, 2.0.0)</osgi.framework.import.version.range>
         <osgi.service.component.import.version.range>[1.2.0, 2.0.0)</osgi.service.component.import.version.range>
         <carbon.identity.package.import.version.range>[7.5.0, 8.0.0)</carbon.identity.package.import.version.range>
+        <org.wso2.identity.organization.mgt.version>2.0.3</org.wso2.identity.organization.mgt.version>
         <org.wso2.identity.organization.mgt.import.version.range>[1.0.0,3.0.0)
         </org.wso2.identity.organization.mgt.import.version.range>
         <carbon.kernel.package.import.version.range>[4.7.0, 5.0.0)</carbon.kernel.package.import.version.range>
