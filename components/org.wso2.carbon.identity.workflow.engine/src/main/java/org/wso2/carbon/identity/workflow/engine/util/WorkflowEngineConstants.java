@@ -100,6 +100,8 @@ public class WorkflowEngineConstants {
         public static final String ENTITY_TYPE_ROLES = "roles";
         public static final String ENTITY_TYPE_USERS = "users";
         public static final String ENTITY_TYPE_CLAIMED_USERS = "claimedUsers";
+        public static final String CLAIMS_PROPERTY_NAME = "Claims";
+        public static final String CLAIMS_UI_PROPERTY_NAME = "ClaimsUI";
     }
 
     /**
