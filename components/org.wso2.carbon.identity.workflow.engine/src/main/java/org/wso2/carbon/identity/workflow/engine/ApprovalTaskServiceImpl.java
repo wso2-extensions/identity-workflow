@@ -19,13 +19,17 @@
 package org.wso2.carbon.identity.workflow.engine;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
@@ -67,6 +71,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -319,16 +324,30 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     private List<String> getAssignedRoleIds(String userId, String tenantDomain) throws WorkflowEngineException {
 
+
+        String orgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+        String userResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getUserResidentOrganizationId();
+        if (!StringUtils.equals(orgId, userResidentOrgId)) {
+            try {
+                Optional<String> optionalUserId = OrganizationSharedUserUtil
+                        .getUserIdOfAssociatedUserByOrgId(userId, orgId);
+                if (optionalUserId.isPresent()) {
+                    userId = optionalUserId.get();
+                }
+            } catch (OrganizationManagementException e) {
+                throw new WorkflowEngineException(
+                        WorkflowEngineConstants.ErrorMessages.ERROR_RETRIEVING_ASSOCIATED_USER_ID.getDescription(), e);
+            }
+        }
         try {
             List<String> roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().
                     getRoleIdListOfUser(userId, tenantDomain);
             return new ArrayList<>(roleIDList);
         } catch (IdentityRoleManagementException e) {
             throw new WorkflowEngineException(
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER
-                            .getCode(),
                     WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.
-                            getDescription());
+                            getDescription(), e);
         }
 
     }
