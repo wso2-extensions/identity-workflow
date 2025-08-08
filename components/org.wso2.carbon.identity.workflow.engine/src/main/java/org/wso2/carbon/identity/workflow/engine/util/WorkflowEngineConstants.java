@@ -155,7 +155,7 @@ public class WorkflowEngineConstants {
         ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER("SWE_00008", "Unable to retrieve " +
                 "approvals for the user, " +
                 "Server encountered an error while retrieving approvals for user."),
-        ERROR_RETRIEVING_ASSOCIATED_USER_ID("SWE_00009", "Unable to retrieve the user ID." +
+        ERROR_RETRIEVING_ASSOCIATED_USER_ID("SWE_00009", "Unable to retrieve the user ID. " +
                 "Server encountered an error while retrieving the user ID associated with the task."),
         USER_ERROR_NON_EXISTING_TASK_ID("SWE_10001", "Task does not exist."),
         USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE("10005", "Unacceptable input provided, " +
