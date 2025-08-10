@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.workflow.engine.DefaultApprovalWorkflowRequestEx
 import org.wso2.carbon.identity.workflow.engine.DefaultTemplateInitializer;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.workflow.AbstractWorkflow;
+import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * OSGi declarative services component which handles registration and un-registration of workflow engine management
@@ -110,5 +111,22 @@ public class WorkflowEngineServiceComponent {
     private void unsetRoleManagementService(RoleManagementService roleManagementService) {
 
         WorkflowEngineServiceDataHolder.getInstance().setRoleManagementService(null);
+    }
+
+    @Reference(
+            name = "user.realmservice.default",
+            service = RealmService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRealmService"
+    )
+    protected void setRealmService(RealmService realmService) {
+
+        WorkflowEngineServiceDataHolder.getInstance().setRealmService(realmService);
+    }
+
+    protected void unsetRealmService(RealmService realmService) {
+
+        WorkflowEngineServiceDataHolder.getInstance().setRealmService(null);
     }
 }

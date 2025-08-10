@@ -30,7 +30,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
@@ -63,6 +65,8 @@ import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
 import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowClientException;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -100,6 +104,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private final ClaimMetadataManagementServiceImpl claimMetadataManagementService =
             new ClaimMetadataManagementServiceImpl();
 
+    private static final String ROLE_ID_PARAM_NAME = "Role ID";
+    private static final String ROLE_NAME_PARAM_NAME = "Role Name";
+    private static final String USERS_TO_BE_ADDED_PARAM_NAME = "Users to be Added";
+    private static final String USERS_TO_BE_DELETED_PARAM_NAME = "Users to be Deleted";
+    private static final String ROLE_ASSOCIATED_APPLICATION_PARAM_NAME = "Role Associated Application";
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
@@ -154,6 +163,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         if (offset == null || offset < 0) {
             offset = OFFSET;
         }
+        approvalTaskSummaryDTOS.sort((taskA, taskB) -> {
+            long createdTimeForTaskA = Long.parseLong(taskA.getCreatedTimeInMillis());
+            long createdTimeForTaskB = Long.parseLong(taskB.getCreatedTimeInMillis());
+            return Long.compare(createdTimeForTaskB, createdTimeForTaskA); // Descending order
+        });
         return approvalTaskSummaryDTOS.subList(Math.min(offset, approvalTaskSummaryDTOS.size()),
                 Math.min(offset + limit, approvalTaskSummaryDTOS.size()));
     }
@@ -431,7 +445,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         List<Parameter> parameterList = getParameterList(workflowRequest);
         String workflowId = approvalTaskDAO.getWorkflowID(approvalTaskId);
 
-        approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(workflowRequestId);
+        // approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(workflowRequestId);
 
         int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
         if (stepValue < numOfStates(workflowRequest)) {
@@ -444,7 +458,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private void handleReject(String approvalTaskId) throws WorkflowEngineServerException {
 
         String requestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
-        approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(requestID);
+        // approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(requestID);
         completeWorkflowRequest(requestID, REJECTED);
     }
 
@@ -541,7 +555,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         return parameterList;
     }
 
-    private List<TaskParam> getRequestParameters(WorkflowRequest workflowRequest) {
+    private List<TaskParam> getRequestParameters(WorkflowRequest workflowRequest) throws WorkflowEngineException {
 
         List<TaskParam> taskParamsList = new ArrayList<>();
 
@@ -551,9 +565,44 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             }
             Object value = param.getValue();
             if (value != null) {
+                String valueString = value.toString().trim();
+                String paramString = param.getName().trim();
                 TaskParam taskParam = new TaskParam();
-                taskParam.setItemValue(value.toString());
-                taskParam.setItemName(param.getName());
+                if (ROLE_ID_PARAM_NAME.equals(param.getName())) {
+                    String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
+                    try {
+                        paramString = ROLE_NAME_PARAM_NAME;
+                        RoleBasicInfo roleBasicInfo = WorkflowEngineServiceDataHolder.getInstance()
+                                .getRoleManagementService().getRoleBasicInfoById(valueString, tenantDomain);
+                        valueString = roleBasicInfo.getName();
+                        if (RoleConstants.APPLICATION.equals(roleBasicInfo.getAudience())) {
+                            TaskParam taskParam1 = new TaskParam();
+                            taskParam1.setItemValue(roleBasicInfo.getAudienceName());
+                            taskParam1.setItemName(ROLE_ASSOCIATED_APPLICATION_PARAM_NAME);
+                            taskParamsList.add(taskParam1);
+                        }
+                    } catch (IdentityRoleManagementException e) {
+                        throw new WorkflowEngineException(e.getMessage(), e);
+                    }
+                } else if (USERS_TO_BE_ADDED_PARAM_NAME.equals(paramString)
+                        || USERS_TO_BE_DELETED_PARAM_NAME.equals(paramString)) {
+                    try {
+                        AbstractUserStoreManager userStoreManager =
+                                (AbstractUserStoreManager) WorkflowEngineServiceDataHolder.getInstance()
+                                .getRealmService().getTenantUserRealm(workflowRequest.getTenantId())
+                                        .getUserStoreManager();
+                        if (value instanceof List) {
+                            List<String> userNames = userStoreManager.getUserNamesFromUserIDs((List<String>) value);
+                            if (CollectionUtils.isNotEmpty(userNames)) {
+                                valueString = String.join(" , ", userNames);
+                            }
+                        }
+                    } catch (UserStoreException e) {
+                        throw new WorkflowEngineException(e.getMessage(), e);
+                    }
+                }
+                taskParam.setItemValue(valueString);
+                taskParam.setItemName(paramString);
                 taskParamsList.add(taskParam);
             }
         }
