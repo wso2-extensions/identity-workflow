@@ -109,7 +109,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private static final String USERS_TO_BE_ADDED_PARAM_NAME = "Users to be Added";
     private static final String USERS_TO_BE_DELETED_PARAM_NAME = "Users to be Deleted";
     private static final String ROLE_ASSOCIATED_APPLICATION_PARAM_NAME = "Role Associated Application";
-    private static final String USERNAME_SEPARATOR = " , ";
+    private static final String COMMA_SEPARATOR = ",";
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
@@ -255,7 +255,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
                     String approverIdentifiers = parameter.getParamValue();
                     if (approverIdentifiers != null && !approverIdentifiers.isEmpty()) {
-                        String[] approverIdentifierList = approverIdentifiers.split(",", 0);
+                        String[] approverIdentifierList = approverIdentifiers.split(COMMA_SEPARATOR, 0);
                         approverCountInCurrentStep += approverIdentifierList.length; // Efficient count here
                         for (String approverIdentifier : approverIdentifierList) {
                             String taskId = UUID.randomUUID().toString();
@@ -298,8 +298,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param userId The ID of the user whose related task IDs should be retrieved.
      * @return List of task IDs assigned to the user, filtered by the specified statuses.
      */
-    private List<ApprovalTaskSummaryDTO> getAllAssignedTasks(List<String> statusList, String userId, int limit, int offset)
-            throws WorkflowEngineException {
+    private List<ApprovalTaskSummaryDTO> getAllAssignedTasks(List<String> statusList, String userId, int limit,
+                                                             int offset) throws WorkflowEngineException {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         List<String> entityIds = new ArrayList<>();
@@ -572,7 +572,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                         if (value instanceof List) {
                             List<String> userNames = userStoreManager.getUserNamesFromUserIDs((List<String>) value);
                             if (CollectionUtils.isNotEmpty(userNames)) {
-                                valueString = String.join(USERNAME_SEPARATOR, userNames);
+                                valueString = String.join(COMMA_SEPARATOR, userNames);
                             }
                         }
                     } catch (UserStoreException e) {
@@ -620,7 +620,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
 
         // Split the claims by comma and iterate through each claim.
-        String[] claimArray = claims.split(",");
+        String[] claimArray = claims.split(COMMA_SEPARATOR);
 
         List<LocalClaim> localClaims;
         try {
