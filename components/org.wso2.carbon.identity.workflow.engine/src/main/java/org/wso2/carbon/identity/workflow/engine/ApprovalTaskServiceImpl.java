@@ -445,7 +445,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         List<Parameter> parameterList = getParameterList(workflowRequest);
         String workflowId = approvalTaskDAO.getWorkflowID(approvalTaskId);
 
-        // approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(workflowRequestId);
+        approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, ApprovalTaskServiceImpl.APPROVED);
 
         int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
         if (stepValue < numOfStates(workflowRequest)) {
@@ -458,7 +458,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private void handleReject(String approvalTaskId) throws WorkflowEngineServerException {
 
         String requestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
-        // approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(requestID);
+        approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, REJECTED);
         completeWorkflowRequest(requestID, REJECTED);
     }
 
