@@ -66,12 +66,17 @@ public class WorkflowEngineConstants {
                 "APPROVER_NAME, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String GET_TASK_ID_FROM_REQUEST = "SELECT TASK_ID FROM WF_WORKFLOW_APPROVAL_RELATION " +
                 "WHERE EVENT_ID= ?";
-        public static final String GET_APPROVAL_TASK_DETAILS_FROM_APPROVER_AND_TYPE =
-                "SELECT TASK_ID, EVENT_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION " +
-                        "WHERE APPROVER_NAME = ? AND APPROVER_TYPE = ?";
+        public static final String GET_APPROVAL_TASK_DETAILS_FROM_APPROVER =
+                "SELECT TASK_ID, EVENT_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION INNER JOIN WF_REQUEST " +
+                        "ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
+                        "WHERE APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") " +
+                        "ORDER BY WF_REQUEST.UPDATED_AT DESC";
         public static final String GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES =
-                "SELECT TASK_ID, EVENT_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION " +
-                        "WHERE APPROVER_NAME = ? AND APPROVER_TYPE = ? AND TASK_STATUS IN (%s)";
+                "SELECT TASK_ID, EVENT_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION INNER JOIN WF_REQUEST " +
+                        "ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
+                        "WHERE APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") AND " +
+                        "TASK_STATUS IN (" + SQLPlaceholders.STATUS_LIST_PLACEHOLDER + ") " +
+                        "ORDER BY WF_REQUEST.UPDATED_AT DESC";
         public static final String GET_TASK_STATUS = "SELECT DISTINCT TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION " +
                 "WHERE TASK_ID = ?";
         public static final String GET_CREATED_USER = "SELECT CREATED_BY FROM WF_REQUEST WHERE UUID= ?";
@@ -79,6 +84,17 @@ public class WorkflowEngineConstants {
         public static final String GET_REQUEST_ID_OF_RELATIONSHIP = "SELECT RELATIONSHIP_ID FROM " +
                 "WF_WORKFLOW_REQUEST_RELATION WHERE REQUEST_ID = ?";
     }
+
+      /**
+     * SQL Placeholders.
+     */
+    public static final class SQLPlaceholders {
+
+        public static final String ENTITY_ID_LIST_PLACEHOLDER = "_ENTITY_ID_LIST_";
+        public static final String ENTITY_ID_PLACEHOLDER_PREFIX = "ENTITY_ID_";
+        public static final String STATUS_LIST_PLACEHOLDER = "_STATUS_LIST_";
+        public static final String STATUS_PLACEHOLDER_PREFIX = "STATUS_";
+      }
 
     /**
      * Holds constant parameter names.

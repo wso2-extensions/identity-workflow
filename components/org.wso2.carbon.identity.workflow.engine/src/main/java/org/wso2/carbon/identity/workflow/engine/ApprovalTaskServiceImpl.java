@@ -115,9 +115,16 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
             throws WorkflowEngineException {
 
+        if (limit == null || limit < 0) {
+            limit = LIMIT;
+        }
+        if (offset == null || offset < 0) {
+            offset = OFFSET;
+        }
+
         String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
 
-        List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(statusList, userId);
+        List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(statusList, userId, limit, offset);
         List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
                 .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
                         .equals(approvalTask.getApprovalStatus())).map(ApprovalTaskSummaryDTO::getRequestId)
@@ -158,17 +165,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             approvalTaskSummaryDTO.setApprovalStatus(approvalTaskSummaryDTO.getApprovalStatus());
         }
 
-        if (limit == null || limit < 0) {
-            limit = LIMIT;
-        }
-        if (offset == null || offset < 0) {
-            offset = OFFSET;
-        }
-        approvalTaskSummaryDTOS.sort((taskA, taskB) -> {
-            long createdTimeForTaskA = Long.parseLong(taskA.getCreatedTimeInMillis());
-            long createdTimeForTaskB = Long.parseLong(taskB.getCreatedTimeInMillis());
-            return Long.compare(createdTimeForTaskB, createdTimeForTaskA); // Descending order
-        });
         return approvalTaskSummaryDTOS.subList(Math.min(offset, approvalTaskSummaryDTOS.size()),
                 Math.min(offset + limit, approvalTaskSummaryDTOS.size()));
     }
@@ -302,38 +298,19 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param userId The ID of the user whose related task IDs should be retrieved.
      * @return List of task IDs assigned to the user, filtered by the specified statuses.
      */
-    private List<ApprovalTaskSummaryDTO> getAllAssignedTasks(List<String> statusList, String userId)
+    private List<ApprovalTaskSummaryDTO> getAllAssignedTasks(List<String> statusList, String userId, int limit, int offset)
             throws WorkflowEngineException {
 
-        List<ApprovalTaskSummaryDTO> allTaskIDs = new ArrayList<>();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        List<String> entityIds = new ArrayList<>();
+        entityIds.add(userId);
 
-        // Get role-based task IDs.
         List<String> roleIds = getAssignedRoleIds(userId, tenantDomain);
-        for (String roleId : roleIds) {
-            List<ApprovalTaskSummaryDTO> tasksAssignedByRole =
-                    getTaskIDsByEntity(ENTITY_TYPE_ROLES, roleId, statusList);
-            allTaskIDs.addAll(tasksAssignedByRole);
-        }
-
-        // Get user-based task IDs.
-        List<ApprovalTaskSummaryDTO> tasksIDsByUser = getTaskIDsByEntity(ENTITY_TYPE_USERS, userId, statusList);
-        allTaskIDs.addAll(tasksIDsByUser);
-
-        // Get task ids of the request that is claimed by the user.
-        List<ApprovalTaskSummaryDTO> tasksClaimedByUser =
-                getTaskIDsByEntity(ENTITY_TYPE_CLAIMED_USERS, userId, statusList);
-        allTaskIDs.addAll(tasksClaimedByUser);
-        return allTaskIDs;
-    }
-
-    private List<ApprovalTaskSummaryDTO> getTaskIDsByEntity(String entityType, String entityId, List<String> statusList)
-            throws WorkflowEngineServerException {
-
+        entityIds.addAll(roleIds);
         if (statusList == null || statusList.isEmpty()) {
-            return approvalTaskDAO.getApprovalTaskDetailsList(entityType, entityId);
+            return approvalTaskDAO.getApprovalTaskDetailsList(entityIds, limit, offset);
         } else {
-            return approvalTaskDAO.getApprovalTaskDetailsListByStatus(entityType, entityId, statusList);
+            return approvalTaskDAO.getApprovalTaskDetailsListByStatus(entityIds, statusList, limit, offset);
         }
     }
 
