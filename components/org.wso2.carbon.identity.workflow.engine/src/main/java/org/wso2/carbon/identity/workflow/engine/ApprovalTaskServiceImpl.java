@@ -109,6 +109,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private static final String USERS_TO_BE_ADDED_PARAM_NAME = "Users to be Added";
     private static final String USERS_TO_BE_DELETED_PARAM_NAME = "Users to be Deleted";
     private static final String ROLE_ASSOCIATED_APPLICATION_PARAM_NAME = "Role Associated Application";
+    private static final String USERNAME_SEPARATOR = " , ";
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
@@ -594,7 +595,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                         if (value instanceof List) {
                             List<String> userNames = userStoreManager.getUserNamesFromUserIDs((List<String>) value);
                             if (CollectionUtils.isNotEmpty(userNames)) {
-                                valueString = String.join(" , ", userNames);
+                                valueString = String.join(USERNAME_SEPARATOR, userNames);
                             }
                         }
                     } catch (UserStoreException e) {
