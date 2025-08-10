@@ -319,7 +319,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
             String sqlStmt = GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES
                     .replace(ENTITY_ID_LIST_PLACEHOLDER, placeholders);
 
-            placeholders = IntStream.range(0, entityIds.size())
+            placeholders = IntStream.range(0, statusList.size())
                     .mapToObj(i -> ":" + STATUS_PLACEHOLDER_PREFIX + i + ";")
                     .collect(Collectors.joining(", "));
             sqlStmt = sqlStmt.replace(STATUS_LIST_PLACEHOLDER, placeholders);
