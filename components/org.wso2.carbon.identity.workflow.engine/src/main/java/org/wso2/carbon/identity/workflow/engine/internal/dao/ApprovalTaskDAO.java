@@ -95,23 +95,27 @@ public interface ApprovalTaskDAO {
     /**
      * Returns the approval task details given the approver type and name.
      *
-     * @param approverType entity type.
-     * @param approverName entity value.
+     * @param entityIds list of entity IDs.
+     * @param limit maximum number of results to return.
+     * @param offset offset for pagination.
      * @return events list.
+     * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
      */
-    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(String approverType, String approverName)
+    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset)
             throws WorkflowEngineServerException;
 
     /**
-     * Returns the approval task details given the approver type, name and status.
+     * Returns the approval task details given the approver type and status.
      *
-     * @param approverType entity type.
-     * @param approverName entity value.
-     * @param statusList       request status
-     * @return events list.
+     * @param entityIds   List of entity IDs.
+     * @param statusList  List of request statuses.
+     * @param limit       Maximum number of results to return.
+     * @param offset      Offset for pagination.
+     * @return            List of approval task summary DTOs.
+     * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
      */
-    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(String approverType, String approverName,
-                                                                    List<String> statusList)
+    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(List<String> entityIds, List<String> statusList,
+                                                                    int limit, int offset)
             throws WorkflowEngineServerException;
 
     /**

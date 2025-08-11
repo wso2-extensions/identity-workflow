@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.workflow.engine.internal;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.workflow.AbstractWorkflow;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,7 @@ public class WorkflowEngineServiceDataHolder {
 
     private WorkflowManagementService workflowManagementService;
     private RoleManagementService roleManagementService;
-
+    private RealmService realmService;
 
     private WorkflowEngineServiceDataHolder() {
 
@@ -72,4 +73,13 @@ public class WorkflowEngineServiceDataHolder {
         return workflowImpls;
     }
 
+    public RealmService getRealmService() {
+
+        return realmService;
+    }
+
+    public void setRealmService(RealmService realmService) {
+
+        this.realmService = realmService;
+    }
 }

@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.workflow.engine.internal.dao.impl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
+import org.wso2.carbon.database.utils.jdbc.NamedJdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.util.JdbcUtils;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
@@ -33,6 +34,15 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.ENTITY_ID_PLACEHOLDER_PREFIX;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.STATUS_LIST_PLACEHOLDER;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.STATUS_PLACEHOLDER_PREFIX;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SqlQueries.GET_APPROVAL_TASK_DETAILS_FROM_APPROVER;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SqlQueries.GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES;
 
 /**
  * Workflow Event Request DAO implementation.
@@ -254,28 +264,35 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
         return requestId;
     }
 
-    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(String approverType, String approverName)
+    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset)
             throws WorkflowEngineServerException {
 
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        if (entityIds == null || entityIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String placeholders = IntStream.range(0, entityIds.size())
+                .mapToObj(i -> ":" + ENTITY_ID_PLACEHOLDER_PREFIX + i + ";")
+                .collect(Collectors.joining(", "));
+        String sqlStmt = GET_APPROVAL_TASK_DETAILS_FROM_APPROVER.replace(ENTITY_ID_LIST_PLACEHOLDER, placeholders);
+
+        NamedJdbcTemplate namedJdbcTemplate = JdbcUtils.getNewNamedJdbcTemplate();
         try {
-            return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_APPROVAL_TASK_DETAILS_FROM_APPROVER_AND_TYPE,
-                    (resultSet, rowNumber) -> {
+            return namedJdbcTemplate.executeQuery(sqlStmt, (resultSet, rowNumber) -> {
                         ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
                         approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
                         approvalTaskSummaryDTO.setRequestId(resultSet.getString(WorkflowEngineConstants.EVENT_ID));
                         approvalTaskSummaryDTO
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
-                    },
-                    preparedStatement -> {
-                        preparedStatement.setString(1, approverName);
-                        preparedStatement.setString(2, approverType);
+                    }, namedPreparedStatement -> {
+                        for (int i = 0; i < entityIds.size(); i++) {
+                            namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
+                        }
                     });
         } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving task id from" +
-                    "approver name: %s" + " of approver type: %s", approverName, approverType);
+            String errorMessage = "Error occurred while retrieving task IDs from entity IDs: " +
+                    String.join(", ", entityIds);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -284,34 +301,47 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     }
 
 
-    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(String approverType, String approverName,
-                                                                           List<String> statusList)
+    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(List<String> entityIds,
+                                                                           List<String> statusList, int limit,
+                                                                           int offset)
             throws WorkflowEngineServerException {
 
-        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        if (entityIds == null || entityIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        NamedJdbcTemplate namedJdbcTemplate = JdbcUtils.getNewNamedJdbcTemplate();
+
         try {
-            String statusPlaceholders = String.join(", ", Collections.nCopies(statusList.size(), "?"));
-            String query = String.format(WorkflowEngineConstants.SqlQueries
-                    .GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES, statusPlaceholders);
-            return jdbcTemplate.executeQuery(query,
-                    (resultSet, rowNumber) -> {
+            String placeholders = IntStream.range(0, entityIds.size())
+                    .mapToObj(i -> ":" + ENTITY_ID_PLACEHOLDER_PREFIX + i + ";")
+                    .collect(Collectors.joining(", "));
+            String sqlStmt = GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES
+                    .replace(ENTITY_ID_LIST_PLACEHOLDER, placeholders);
+
+            placeholders = IntStream.range(0, statusList.size())
+                    .mapToObj(i -> ":" + STATUS_PLACEHOLDER_PREFIX + i + ";")
+                    .collect(Collectors.joining(", "));
+            sqlStmt = sqlStmt.replace(STATUS_LIST_PLACEHOLDER, placeholders);
+
+            return namedJdbcTemplate.executeQuery(sqlStmt, (resultSet, rowNumber) -> {
                         ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
                         approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
                         approvalTaskSummaryDTO.setRequestId(resultSet.getString(WorkflowEngineConstants.EVENT_ID));
                         approvalTaskSummaryDTO
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
-                    },
-                    preparedStatement -> {
-                        preparedStatement.setString(1, approverName);
-                        preparedStatement.setString(2, approverType);
+                    }, namedPreparedStatement -> {
+                        for (int i = 0; i < entityIds.size(); i++) {
+                            namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
+                        }
                         for (int i = 0; i < statusList.size(); i++) {
-                            preparedStatement.setString(i + 3, statusList.get(i));
+                            namedPreparedStatement.setString(STATUS_PLACEHOLDER_PREFIX + i, statusList.get(i));
                         }
                     });
         } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving task id from" +
-                    "approver name: %s of approver type: %s", approverName, approverType);
+            String errorMessage = String.format("Error occurred while retrieving task id from entity IDs: %s " +
+                    "and status list: %s", String.join(", ", entityIds), String.join(", ", statusList));
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }

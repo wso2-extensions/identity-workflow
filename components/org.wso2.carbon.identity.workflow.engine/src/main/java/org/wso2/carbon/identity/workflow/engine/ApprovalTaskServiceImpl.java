@@ -30,7 +30,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
@@ -45,24 +47,18 @@ import org.wso2.carbon.identity.workflow.engine.internal.dao.ApprovalTaskDAO;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowRequestDAO;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.ApprovalTaskDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.WorkflowRequestDAOImpl;
-import org.wso2.carbon.identity.workflow.engine.model.TaskDetails;
 import org.wso2.carbon.identity.workflow.engine.model.TaskModel;
 import org.wso2.carbon.identity.workflow.engine.model.TaskParam;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
-import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementServiceImpl;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.bean.RequestParameter;
-import org.wso2.carbon.identity.workflow.mgt.bean.Workflow;
-import org.wso2.carbon.identity.workflow.mgt.bean.WorkflowAssociation;
 import org.wso2.carbon.identity.workflow.mgt.callback.WSWorkflowCallBackService;
 import org.wso2.carbon.identity.workflow.mgt.callback.WSWorkflowResponse;
-import org.wso2.carbon.identity.workflow.mgt.dao.WorkflowRequestAssociationDAO;
 import org.wso2.carbon.identity.workflow.mgt.dto.Association;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
-import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException;
-import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowClientException;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -100,14 +96,29 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private final ClaimMetadataManagementServiceImpl claimMetadataManagementService =
             new ClaimMetadataManagementServiceImpl();
 
+    private static final String ROLE_ID_PARAM_NAME = "Role ID";
+    private static final String ROLE_NAME_PARAM_NAME = "Role Name";
+    private static final String USERS_TO_BE_ADDED_PARAM_NAME = "Users to be Added";
+    private static final String USERS_TO_BE_DELETED_PARAM_NAME = "Users to be Deleted";
+    private static final String ROLE_ASSOCIATED_APPLICATION_PARAM_NAME = "Role Associated Application";
+    private static final String TENANT_DOMAIN_PARAM_NAME = "Tenant Domain";
+    private static final String AUDIENCE_ID_PARAM_NAME = "Audience ID";
+    private static final String COMMA_SEPARATOR = ",";
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
             throws WorkflowEngineException {
 
+        if (limit == null || limit < 0) {
+            limit = LIMIT;
+        }
+        if (offset == null || offset < 0) {
+            offset = OFFSET;
+        }
+
         String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
 
-        List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(statusList, userId);
+        List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(statusList, userId, limit, offset);
         List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
                 .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
                         .equals(approvalTask.getApprovalStatus())).map(ApprovalTaskSummaryDTO::getRequestId)
@@ -130,7 +141,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             duplicatedWorkflowRequestIds.add(approvalTaskSummaryDTO.getRequestId());
 
             WorkflowRequest request = getWorkflowRequest(approvalTaskSummaryDTO.getRequestId());
-            TaskDetails taskDetails = getTaskDetails(request);
 
             String eventType = request.getEventType();
 
@@ -141,19 +151,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             approvalTaskSummaryDTO.setId(approvalTaskSummaryDTO.getId());
             approvalTaskSummaryDTO.setName(workflowAssociationName);
             approvalTaskSummaryDTO.setTaskType(eventType);
-            approvalTaskSummaryDTO.setPresentationName(taskDetails.getTaskSubject());
-            approvalTaskSummaryDTO.setPresentationSubject(taskDetails.getTaskDescription());
             approvalTaskSummaryDTO.setCreatedTimeInMillis(String.valueOf(createdTime.getTime()));
             approvalTaskSummaryDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
             approvalTaskSummaryDTO.setApprovalStatus(approvalTaskSummaryDTO.getApprovalStatus());
         }
 
-        if (limit == null || limit < 0) {
-            limit = LIMIT;
-        }
-        if (offset == null || offset < 0) {
-            offset = OFFSET;
-        }
         return approvalTaskSummaryDTOS.subList(Math.min(offset, approvalTaskSummaryDTOS.size()),
                 Math.min(offset + limit, approvalTaskSummaryDTOS.size()));
     }
@@ -164,7 +166,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         taskId = taskId.trim();
         String requestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(taskId);
         WorkflowRequest request = getWorkflowRequest(requestId);
-        TaskDetails taskDetails = getTaskDetails(request);
         String initiator = workflowRequestDAO.getInitiatedUser(requestId);
         List<String> approvers = approvalTaskDAO.listApprovers(taskId);
         Map<String, String> assigneeMap = new HashMap<>();
@@ -175,8 +176,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         List<PropertyDTO> properties = getPropertyDTOs(params);
         ApprovalTaskDTO approvalTaskDTO = new ApprovalTaskDTO();
         approvalTaskDTO.setId(taskId);
-        approvalTaskDTO.setSubject(taskDetails.getTaskSubject());
-        approvalTaskDTO.setDescription(taskDetails.getTaskDescription());
         String statusValue = approvalTaskDAO.getApprovalTaskStatus(taskId);
         approvalTaskDTO.setApprovalStatus(statusValue);
         approvalTaskDTO.setInitiator(initiator);
@@ -219,9 +218,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     public void addApprovalTasksForWorkflowRequest(WorkflowRequest workflowRequest, List<Parameter> parameterList)
             throws WorkflowEngineException {
 
+        if (CollectionUtils.isEmpty(parameterList)) {
+            return;
+        }
+
         String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
         String workflowRequestId = getWorkflowRequestId(workflowRequest);
-        String workflowId = getWorkflowId(workflowRequest);
+        /* The workflow parameter list has workflow ID for each property object. Retrieve the workflow ID from
+           the first. */
+        String workflowId = parameterList.get(0).getWorkflowId();
         String approverType;
 
         int currentStep = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
@@ -244,7 +249,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
                     String approverIdentifiers = parameter.getParamValue();
                     if (approverIdentifiers != null && !approverIdentifiers.isEmpty()) {
-                        String[] approverIdentifierList = approverIdentifiers.split(",", 0);
+                        String[] approverIdentifierList = approverIdentifiers.split(COMMA_SEPARATOR, 0);
                         approverCountInCurrentStep += approverIdentifierList.length; // Efficient count here
                         for (String approverIdentifier : approverIdentifierList) {
                             String taskId = UUID.randomUUID().toString();
@@ -287,38 +292,19 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param userId The ID of the user whose related task IDs should be retrieved.
      * @return List of task IDs assigned to the user, filtered by the specified statuses.
      */
-    private List<ApprovalTaskSummaryDTO> getAllAssignedTasks(List<String> statusList, String userId)
-            throws WorkflowEngineException {
+    private List<ApprovalTaskSummaryDTO> getAllAssignedTasks(List<String> statusList, String userId, int limit,
+                                                             int offset) throws WorkflowEngineException {
 
-        List<ApprovalTaskSummaryDTO> allTaskIDs = new ArrayList<>();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        List<String> entityIds = new ArrayList<>();
+        entityIds.add(userId);
 
-        // Get role-based task IDs.
         List<String> roleIds = getAssignedRoleIds(userId, tenantDomain);
-        for (String roleId : roleIds) {
-            List<ApprovalTaskSummaryDTO> tasksAssignedByRole =
-                    getTaskIDsByEntity(ENTITY_TYPE_ROLES, roleId, statusList);
-            allTaskIDs.addAll(tasksAssignedByRole);
-        }
-
-        // Get user-based task IDs.
-        List<ApprovalTaskSummaryDTO> tasksIDsByUser = getTaskIDsByEntity(ENTITY_TYPE_USERS, userId, statusList);
-        allTaskIDs.addAll(tasksIDsByUser);
-
-        // Get task ids of the request that is claimed by the user.
-        List<ApprovalTaskSummaryDTO> tasksClaimedByUser =
-                getTaskIDsByEntity(ENTITY_TYPE_CLAIMED_USERS, userId, statusList);
-        allTaskIDs.addAll(tasksClaimedByUser);
-        return allTaskIDs;
-    }
-
-    private List<ApprovalTaskSummaryDTO> getTaskIDsByEntity(String entityType, String entityId, List<String> statusList)
-            throws WorkflowEngineServerException {
-
+        entityIds.addAll(roleIds);
         if (statusList == null || statusList.isEmpty()) {
-            return approvalTaskDAO.getApprovalTaskDetailsList(entityType, entityId);
+            return approvalTaskDAO.getApprovalTaskDetailsList(entityIds, limit, offset);
         } else {
-            return approvalTaskDAO.getApprovalTaskDetailsListByStatus(entityType, entityId, statusList);
+            return approvalTaskDAO.getApprovalTaskDetailsListByStatus(entityIds, statusList, limit, offset);
         }
     }
 
@@ -397,24 +383,19 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private int numOfStates(WorkflowRequest request) throws WorkflowEngineException {
+    private int getNumberOfApprovalStepsFromWorkflowParameters(List<Parameter> workflowParameterList) {
 
-        List<Parameter> parameterList = getParameterList(request);
         int maxStep = 0;
 
-        for (Parameter parameter : parameterList) {
+        for (Parameter parameter : workflowParameterList) {
             if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
                 String value = parameter.getqName();
                 if (value != null && !value.isEmpty()) {
                     String[] parts = value.split("-");
                     if (parts.length > 1) {
-                        try {
-                            int step = Integer.parseInt(parts[1]);
-                            if (step > maxStep) {
-                                maxStep = step;
-                            }
-                        } catch (NumberFormatException e) {
-                            throw new RuntimeException(e);
+                        int step = Integer.parseInt(parts[1]);
+                        if (step > maxStep) {
+                            maxStep = step;
                         }
                     }
                 }
@@ -427,15 +408,20 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private void handleApproval(String approvalTaskId) throws WorkflowEngineException {
 
         String workflowRequestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
-        WorkflowRequest workflowRequest = getWorkflowRequest(workflowRequestId);
-        List<Parameter> parameterList = getParameterList(workflowRequest);
         String workflowId = approvalTaskDAO.getWorkflowID(approvalTaskId);
 
-        approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(workflowRequestId);
+        approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, ApprovalTaskServiceImpl.APPROVED);
 
         int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
-        if (stepValue < numOfStates(workflowRequest)) {
-            addApprovalTasksForWorkflowRequest(workflowRequest, parameterList);
+        List<Parameter> approvalWorkflowParameterList = getApprovalWorkflowParameters(workflowId);
+
+        /* If the current step value is less than the total number of approval steps defined in the workflow
+           parameters, then we need to add more approval tasks for the next step. Otherwise,
+           we can complete the workflow request with an approved status. */
+        if (stepValue < getNumberOfApprovalStepsFromWorkflowParameters(approvalWorkflowParameterList)) {
+            WorkflowRequest workflowRequest = new WorkflowRequest();
+            workflowRequest.setUuid(workflowRequestId);
+            addApprovalTasksForWorkflowRequest(workflowRequest, approvalWorkflowParameterList);
         } else {
             completeWorkflowRequest(workflowRequestId, ApprovalTaskServiceImpl.APPROVED);
         }
@@ -444,7 +430,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private void handleReject(String approvalTaskId) throws WorkflowEngineServerException {
 
         String requestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
-        approvalTaskDAO.deleteApprovalTasksOfWorkflowRequest(requestID);
+        approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, REJECTED);
         completeWorkflowRequest(requestID, REJECTED);
     }
 
@@ -507,41 +493,18 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         wsWorkflowCallBackService.onCallback(wsWorkflowResponse);
     }
 
-    private TaskDetails getTaskDetails(WorkflowRequest workflowRequest) throws WorkflowEngineException {
+    private List<Parameter> getApprovalWorkflowParameters(String workflowId) throws WorkflowEngineException {
 
-        List<Parameter> parameterList = getParameterList(workflowRequest);
-        TaskDetails taskDetails = new TaskDetails();
-        if (CollectionUtils.isEmpty(parameterList)) {
-            return taskDetails;
+        try {
+            return WorkflowEngineServiceDataHolder.getInstance().getWorkflowManagementService().
+                    getWorkflowParameters(workflowId);
+        } catch (WorkflowException e) {
+            throw new WorkflowEngineException(WorkflowEngineConstants.ErrorMessages
+                    .ERROR_OCCURRED_WHILE_RETRIEVING_PARAMETER_LIST.getDescription(), e);
         }
-        for (Parameter parameter : parameterList) {
-            if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.TASK_SUBJECT)) {
-                taskDetails.setTaskSubject(parameter.getParamValue());
-            }
-            if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.TASK_DESCRIPTION)) {
-                taskDetails.setTaskDescription(parameter.getParamValue());
-            }
-        }
-        return taskDetails;
     }
 
-    private List<Parameter> getParameterList(WorkflowRequest workflowRequest) throws WorkflowEngineException {
-
-        List<WorkflowAssociation> associations = getAssociations(workflowRequest);
-        List<Parameter> parameterList = null;
-        for (WorkflowAssociation association : associations) {
-            try {
-                parameterList = WorkflowEngineServiceDataHolder.getInstance().getWorkflowManagementService().
-                        getWorkflowParameters(association.getWorkflowId());
-            } catch (WorkflowException e) {
-                throw new WorkflowEngineException(WorkflowEngineConstants.ErrorMessages
-                        .ERROR_OCCURRED_WHILE_RETRIEVING_PARAMETER_LIST.getDescription(), e);
-            }
-        }
-        return parameterList;
-    }
-
-    private List<TaskParam> getRequestParameters(WorkflowRequest workflowRequest) {
+    private List<TaskParam> getRequestParameters(WorkflowRequest workflowRequest) throws WorkflowEngineException {
 
         List<TaskParam> taskParamsList = new ArrayList<>();
 
@@ -551,9 +514,47 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             }
             Object value = param.getValue();
             if (value != null) {
+                String valueString = value.toString().trim();
+                String paramString = param.getName().trim();
                 TaskParam taskParam = new TaskParam();
-                taskParam.setItemValue(value.toString());
-                taskParam.setItemName(param.getName());
+                if (ROLE_ID_PARAM_NAME.equals(param.getName())) {
+                    String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
+                    try {
+                        paramString = ROLE_NAME_PARAM_NAME;
+                        RoleBasicInfo roleBasicInfo = WorkflowEngineServiceDataHolder.getInstance()
+                                .getRoleManagementService().getRoleBasicInfoById(valueString, tenantDomain);
+                        valueString = roleBasicInfo.getName();
+                        if (RoleConstants.APPLICATION.equals(roleBasicInfo.getAudience())) {
+                            TaskParam taskParam1 = new TaskParam();
+                            taskParam1.setItemValue(roleBasicInfo.getAudienceName());
+                            taskParam1.setItemName(ROLE_ASSOCIATED_APPLICATION_PARAM_NAME);
+                            taskParamsList.add(taskParam1);
+                        }
+                    } catch (IdentityRoleManagementException e) {
+                        throw new WorkflowEngineException(e.getMessage(), e);
+                    }
+                } else if (USERS_TO_BE_ADDED_PARAM_NAME.equals(paramString)
+                        || USERS_TO_BE_DELETED_PARAM_NAME.equals(paramString)) {
+                    try {
+                        AbstractUserStoreManager userStoreManager =
+                                (AbstractUserStoreManager) WorkflowEngineServiceDataHolder.getInstance()
+                                .getRealmService().getTenantUserRealm(workflowRequest.getTenantId())
+                                        .getUserStoreManager();
+                        if (value instanceof List) {
+                            List<String> userNames = userStoreManager.getUserNamesFromUserIDs((List<String>) value);
+                            if (CollectionUtils.isNotEmpty(userNames)) {
+                                valueString = String.join(COMMA_SEPARATOR, userNames);
+                            }
+                        }
+                    } catch (UserStoreException e) {
+                        throw new WorkflowEngineException(e.getMessage(), e);
+                    }
+                } else if (TENANT_DOMAIN_PARAM_NAME.equals(paramString)) {
+                    // Skip these parameters as they are not required in the task parameters.
+                    continue;
+                }
+                taskParam.setItemValue(valueString);
+                taskParam.setItemName(paramString);
                 taskParamsList.add(taskParam);
             }
         }
@@ -593,7 +594,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
 
         // Split the claims by comma and iterate through each claim.
-        String[] claimArray = claims.split(",");
+        String[] claimArray = claims.split(COMMA_SEPARATOR);
 
         List<LocalClaim> localClaims;
         try {
@@ -643,40 +644,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             }
         }
         return null;
-    }
-
-    public String getWorkflowId(WorkflowRequest request) throws WorkflowEngineException {
-
-        WorkflowManagementService workflowManagementService = new WorkflowManagementServiceImpl();
-        List<WorkflowAssociation> associations = getAssociations(request);
-        String workflowId = null;
-        for (WorkflowAssociation association : associations) {
-            try {
-                Workflow workflow = workflowManagementService.getWorkflow(association.getWorkflowId());
-                workflowId = workflow.getWorkflowId();
-            } catch (WorkflowClientException e) {
-                throw new WorkflowEngineClientException(
-                        WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getCode(),
-                        WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getDescription());
-            } catch (WorkflowException e) {
-                throw new WorkflowEngineServerException(e.getErrorCode(), e.getMessage());
-            }
-        }
-        return workflowId;
-    }
-
-    public List<WorkflowAssociation> getAssociations(WorkflowRequest workflowRequest) {
-
-        List<WorkflowAssociation> associations = null;
-        WorkflowRequestAssociationDAO requestAssociationDAO = new WorkflowRequestAssociationDAO();
-        try {
-            associations = requestAssociationDAO.getWorkflowAssociationsForRequest(
-                    workflowRequest.getEventType(), workflowRequest.getTenantId());
-        } catch (InternalWorkflowException e) {
-            log.error("Error while retrieving workflow associations for event type: {} and tenant ID: {}",
-                    workflowRequest.getEventType(), workflowRequest.getTenantId(), e);
-        }
-        return associations;
     }
 
     private String findAssociationNameByWorkflowAndEvent(String workflowID, String eventType) {
