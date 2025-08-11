@@ -224,6 +224,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
         String workflowRequestId = getWorkflowRequestId(workflowRequest);
+        /* The workflow parameter list has workflow ID for each property object. Retrieve the workflow ID from
+           the first. */
         String workflowId = parameterList.get(0).getWorkflowId();
         String approverType;
 
@@ -381,7 +383,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private int getNumberOfApprovalSteps(List<Parameter> workflowParameterList) {
+    private int getNumberOfApprovalStepsFromWorkflowParameters(List<Parameter> workflowParameterList) {
 
         int maxStep = 0;
 
@@ -411,9 +413,12 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, ApprovalTaskServiceImpl.APPROVED);
 
         int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
-        List<Parameter> approvalWorkflowParameterList = getApprovalWorkflowConfigurations(workflowId);
+        List<Parameter> approvalWorkflowParameterList = getApprovalWorkflowParameters(workflowId);
 
-        if (stepValue < getNumberOfApprovalSteps(approvalWorkflowParameterList)) {
+        /* If the current step value is less than the total number of approval steps defined in the workflow
+           parameters, then we need to add more approval tasks for the next step. Otherwise,
+           we can complete the workflow request with an approved status. */
+        if (stepValue < getNumberOfApprovalStepsFromWorkflowParameters(approvalWorkflowParameterList)) {
             WorkflowRequest workflowRequest = new WorkflowRequest();
             workflowRequest.setUuid(workflowRequestId);
             addApprovalTasksForWorkflowRequest(workflowRequest, approvalWorkflowParameterList);
@@ -488,7 +493,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         wsWorkflowCallBackService.onCallback(wsWorkflowResponse);
     }
 
-    private List<Parameter> getApprovalWorkflowConfigurations(String workflowId) throws WorkflowEngineException {
+    private List<Parameter> getApprovalWorkflowParameters(String workflowId) throws WorkflowEngineException {
 
         try {
             return WorkflowEngineServiceDataHolder.getInstance().getWorkflowManagementService().
@@ -544,7 +549,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                     } catch (UserStoreException e) {
                         throw new WorkflowEngineException(e.getMessage(), e);
                     }
-                } else if (TENANT_DOMAIN_PARAM_NAME.equals(paramString) || AUDIENCE_ID_PARAM_NAME.equals(paramString)) {
+                } else if (TENANT_DOMAIN_PARAM_NAME.equals(paramString)) {
                     // Skip these parameters as they are not required in the task parameters.
                     continue;
                 }
