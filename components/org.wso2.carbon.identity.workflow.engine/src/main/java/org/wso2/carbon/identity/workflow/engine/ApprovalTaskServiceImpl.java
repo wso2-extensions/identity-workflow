@@ -665,7 +665,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private void handleApprovalTaskCompletion(String approvalTaskId, String workflowRequestId, String status)
             throws WorkflowEngineServerException {
 
-        // Update the approval task status to APPROVED and delete other tasks of the same workflow request.
+        // Update the approval task status to APPROVED / REJECTED and delete other tasks of the same workflow request.
         approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, status);
         approvalTaskDAO.deleteApprovalTasksOfWorkflowRequestExceptGivenId(workflowRequestId, approvalTaskId);
 
