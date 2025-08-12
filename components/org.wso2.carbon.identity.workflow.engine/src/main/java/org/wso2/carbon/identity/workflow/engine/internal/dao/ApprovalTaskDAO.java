@@ -51,6 +51,15 @@ public interface ApprovalTaskDAO {
     ApproverDTO getApproverDetailForApprovalTask(String approvalTaskId) throws WorkflowEngineServerException;
 
     /**
+     * Delete all the approval tasks except the given approval task ID.
+     *
+     * @param workflowRequestId The workflow request ID that need to be checked.
+     * @param approvalTaskId The approval task ID that need to be excluded when deleting.
+     */
+    void deleteApprovalTasksOfWorkflowRequestExceptGivenId(String workflowRequestId, String approvalTaskId)
+            throws WorkflowEngineServerException;
+
+    /**
      * Delete approval tasks correspond to the given workflow request ID.
      *
      * @param workflowRequestId The workflow request ID that need to be checked.
@@ -133,6 +142,16 @@ public interface ApprovalTaskDAO {
      * @param taskStatus state of the tasks [RESERVED, READY or COMPLETED].
      */
     void updateApprovalTaskStatus(String taskId, String taskStatus) throws WorkflowEngineServerException;
+
+    /**
+     * Update the task status given the task ID.
+     *
+     * @param taskId     the task ID that need to be checked.
+     * @param entityType the type of the entity (e.g., user, role).
+     * @param entityId   the ID of
+     */
+    void updateApprovalTaskEntity(String taskId, String entityType, String entityId)
+            throws WorkflowEngineServerException;
 
     /**
      * Returns the approvers list given the authenticated approver name.
