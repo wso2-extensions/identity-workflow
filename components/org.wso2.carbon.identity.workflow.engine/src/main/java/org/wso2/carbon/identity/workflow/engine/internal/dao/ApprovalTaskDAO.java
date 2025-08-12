@@ -150,7 +150,7 @@ public interface ApprovalTaskDAO {
      * @param entityType the type of the entity (e.g., user, role).
      * @param entityId   the ID of
      */
-    void updateApprovalTaskEntity(String taskId, String entityType, String entityId)
+    void updateApprovalTaskEntityDetail(String taskId, String entityType, String entityId)
             throws WorkflowEngineServerException;
 
     /**

@@ -414,20 +414,20 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     }
 
     @Override
-    public void updateApprovalTaskEntity(String taskId, String entityType, String entityId)
+    public void updateApprovalTaskEntityDetail(String taskId, String entityType, String entityId)
             throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
             jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.UPDATE_TASK_ENTITY_DETAILS,
                     (preparedStatement -> {
-                        preparedStatement.setString(1, taskId);
-                        preparedStatement.setString(2, entityType);
-                        preparedStatement.setString(3, entityId);
+                        preparedStatement.setString(1, entityType);
+                        preparedStatement.setString(2, entityId);
+                        preparedStatement.setString(3, taskId);
                     }));
         } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while updating status from" +
-                    "taskID: %s", taskId);
+            String errorMessage = String.format("Error occurred while updating entity details of the taskID: %s",
+                    taskId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }

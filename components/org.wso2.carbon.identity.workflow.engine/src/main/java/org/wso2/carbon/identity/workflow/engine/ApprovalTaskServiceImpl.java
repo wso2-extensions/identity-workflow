@@ -672,7 +672,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         /* Update the entity of the approval task to the current user.
            This is to ensure that the task is marked as completed by the user who approved it
            and to maintain the integrity of the task history. */
-        approvalTaskDAO.updateApprovalTaskEntity(approvalTaskId, ENTITY_TYPE_USERS,
+        approvalTaskDAO.updateApprovalTaskEntityDetail(approvalTaskId, ENTITY_TYPE_USERS,
                 CarbonContext.getThreadLocalCarbonContext().getUserId());
     }
 }
