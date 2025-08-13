@@ -410,7 +410,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String workflowRequestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
         String workflowId = approvalTaskDAO.getWorkflowID(approvalTaskId);
 
-        approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, ApprovalTaskServiceImpl.APPROVED);
+        handleApprovalTaskCompletion(approvalTaskId, workflowRequestId, ApprovalTaskServiceImpl.APPROVED);
 
         int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
         List<Parameter> approvalWorkflowParameterList = getApprovalWorkflowParameters(workflowId);
@@ -429,9 +429,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     private void handleReject(String approvalTaskId) throws WorkflowEngineServerException {
 
-        String requestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
-        approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, REJECTED);
-        completeWorkflowRequest(requestID, REJECTED);
+        String workflowRequestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
+        handleApprovalTaskCompletion(approvalTaskId, workflowRequestId, ApprovalTaskServiceImpl.REJECTED);
+        completeWorkflowRequest(workflowRequestId, REJECTED);
     }
 
     private void handleRelease(String taskId) throws WorkflowEngineServerException {
@@ -660,5 +660,19 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                     eventType, e);
             return null;
         }
+    }
+
+    private void handleApprovalTaskCompletion(String approvalTaskId, String workflowRequestId, String status)
+            throws WorkflowEngineServerException {
+
+        // Update the approval task status to APPROVED / REJECTED and delete other tasks of the same workflow request.
+        approvalTaskDAO.updateApprovalTaskStatus(approvalTaskId, status);
+        approvalTaskDAO.deleteApprovalTasksOfWorkflowRequestExceptGivenId(workflowRequestId, approvalTaskId);
+
+        /* Update the entity of the approval task to the current user.
+           This is to ensure that the task is marked as completed by the user who approved it
+           and to maintain the integrity of the task history. */
+        approvalTaskDAO.updateApprovalTaskEntityDetail(approvalTaskId, ENTITY_TYPE_USERS,
+                CarbonContext.getThreadLocalCarbonContext().getUserId());
     }
 }

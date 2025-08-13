@@ -45,8 +45,10 @@ public class WorkflowEngineConstants {
                 "(TASK_ID,EVENT_ID,WORKFLOW_ID,APPROVER_TYPE,APPROVER_NAME, TASK_STATUS) VALUES (?,?,?,?,?,?)";
         public static final String GET_APPROVER_DETAILS_BY_TASK_ID = "SELECT APPROVER_TYPE, APPROVER_NAME FROM " +
                 "WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
+        public static final String DELETE_APPROVAL_TASK_BY_TASK_ID = "DELETE FROM WF_WORKFLOW_APPROVAL_RELATION " +
+                "WHERE EVENT_ID = ? AND TASK_ID != ?";
         public static final String DELETE_APPROVAL_TASKS_OF_WORKFLOW_REQUEST = "DELETE FROM " +
-                "WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID=?";
+                "WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ?";
         public static final String ADD_CURRENT_STEP_FOR_EVENT = "INSERT INTO WF_WORKFLOW_APPROVAL_STATE " +
                 "(EVENT_ID,WORKFLOW_ID, CURRENT_STEP) VALUES (?,?,1)";
         public static final String GET_CURRENT_STEP = "SELECT CURRENT_STEP FROM WF_WORKFLOW_APPROVAL_STATE WHERE " +
@@ -61,7 +63,9 @@ public class WorkflowEngineConstants {
                 "WF_WORKFLOW_APPROVAL_RELATION " +
                 "WHERE TASK_ID = ?";
         public static final String UPDATE_TASK_STATUS = "UPDATE WF_WORKFLOW_APPROVAL_RELATION SET TASK_STATUS=? " +
-                "WHERE TASK_ID=?";
+                "WHERE TASK_ID = ?";
+        public static final String UPDATE_TASK_ENTITY_DETAILS = "UPDATE WF_WORKFLOW_APPROVAL_RELATION SET " +
+                "APPROVER_TYPE = ?, APPROVER_NAME = ? WHERE TASK_ID = ?";
         public static final String GET_APPROVAL_TASK_BY_TASK_ID = "SELECT EVENT_ID, WORKFLOW_ID, APPROVER_TYPE, " +
                 "APPROVER_NAME, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String GET_TASK_ID_FROM_REQUEST = "SELECT TASK_ID FROM WF_WORKFLOW_APPROVAL_RELATION " +
