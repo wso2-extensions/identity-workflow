@@ -41,6 +41,7 @@ import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConsta
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.ENTITY_ID_PLACEHOLDER_PREFIX;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.STATUS_LIST_PLACEHOLDER;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.STATUS_PLACEHOLDER_PREFIX;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.TENANT_ID_PLACEHOLDER;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SqlQueries.GET_APPROVAL_TASK_DETAILS_FROM_APPROVER;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SqlQueries.GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES;
 
@@ -282,7 +283,8 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
         return requestId;
     }
 
-    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset)
+    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset,
+                                                                   int tenantId)
             throws WorkflowEngineServerException {
 
         if (entityIds == null || entityIds.isEmpty()) {
@@ -304,6 +306,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
                     }, namedPreparedStatement -> {
+                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER, tenantId);
                         for (int i = 0; i < entityIds.size(); i++) {
                             namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
                         }
@@ -321,7 +324,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
 
     public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(List<String> entityIds,
                                                                            List<String> statusList, int limit,
-                                                                           int offset)
+                                                                           int offset, int tenantId)
             throws WorkflowEngineServerException {
 
         if (entityIds == null || entityIds.isEmpty()) {
@@ -350,6 +353,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
                     }, namedPreparedStatement -> {
+                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER, tenantId);
                         for (int i = 0; i < entityIds.size(); i++) {
                             namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
                         }

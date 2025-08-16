@@ -107,10 +107,11 @@ public interface ApprovalTaskDAO {
      * @param entityIds list of entity IDs.
      * @param limit maximum number of results to return.
      * @param offset offset for pagination.
+     * @param tenantId tenant ID.
      * @return events list.
      * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
      */
-    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset)
+    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset, int tenantId)
             throws WorkflowEngineServerException;
 
     /**
@@ -120,11 +121,12 @@ public interface ApprovalTaskDAO {
      * @param statusList  List of request statuses.
      * @param limit       Maximum number of results to return.
      * @param offset      Offset for pagination.
+     * @param tenantId    Tenant ID.
      * @return            List of approval task summary DTOs.
      * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
      */
     List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(List<String> entityIds, List<String> statusList,
-                                                                    int limit, int offset)
+                                                                    int limit, int offset, int tenantId)
             throws WorkflowEngineServerException;
 
     /**

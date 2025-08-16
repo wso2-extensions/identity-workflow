@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
@@ -48,7 +47,6 @@ import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowRequestDAO;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.ApprovalTaskDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.WorkflowRequestDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.model.TaskModel;
-import org.wso2.carbon.identity.workflow.engine.model.TaskParam;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.bean.RequestParameter;
@@ -57,11 +55,13 @@ import org.wso2.carbon.identity.workflow.mgt.callback.WSWorkflowResponse;
 import org.wso2.carbon.identity.workflow.mgt.dto.Association;
 import org.wso2.carbon.identity.workflow.mgt.dto.WorkflowRequest;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
+import org.wso2.carbon.identity.workflow.mgt.util.WorkflowDataType;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -74,9 +74,7 @@ import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants.DISPLAY_NAME_PROPERTY;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.CLAIMS_PROPERTY_NAME;
-import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.CLAIMS_UI_PROPERTY_NAME;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_CLAIMED_USERS;
-import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_ROLES;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.ParameterName.ENTITY_TYPE_USERS;
 
 /**
@@ -172,8 +170,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         for (String assignee : approvers) {
             assigneeMap.put(WorkflowEngineConstants.ParameterName.ASSIGNEE_TYPE, assignee);
         }
-        List<TaskParam> params = getRequestParameters(request);
-        List<PropertyDTO> properties = getPropertyDTOs(params);
+        List<PropertyDTO> properties = getRequestParameters(request);
         ApprovalTaskDTO approvalTaskDTO = new ApprovalTaskDTO();
         approvalTaskDTO.setId(taskId);
         String statusValue = approvalTaskDAO.getApprovalTaskStatus(taskId);
@@ -222,9 +219,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             return;
         }
 
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
         String workflowRequestId = getWorkflowRequestId(workflowRequest);
-        /* The workflow parameter list has workflow ID for each property object. Retrieve the workflow ID from
+        /* The workflow parameter list has the workflow ID for each property object. Retrieve the workflow ID from
            the first. */
         String workflowId = parameterList.get(0).getWorkflowId();
         String approverType;
@@ -238,49 +234,23 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             approvalTaskDAO.updateStateOfRequest(workflowRequestId, workflowId, currentStep);
         }
 
-        int approverCountInCurrentStep = 0;
-        List<String> taskIdsOfCurrentStep = new ArrayList<>();
         for (Parameter parameter : parameterList) {
             if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
                 String[] stepName = parameter.getqName().split("-");
                 int step = Integer.parseInt(stepName[1]);
                 if (currentStep == step) {
                     approverType = stepName[stepName.length - 1];
-
                     String approverIdentifiers = parameter.getParamValue();
                     if (approverIdentifiers != null && !approverIdentifiers.isEmpty()) {
                         String[] approverIdentifierList = approverIdentifiers.split(COMMA_SEPARATOR, 0);
-                        approverCountInCurrentStep += approverIdentifierList.length; // Efficient count here
                         for (String approverIdentifier : approverIdentifierList) {
                             String taskId = UUID.randomUUID().toString();
-                            String taskStatus = WorkflowEngineConstants.ParameterName.TASK_STATUS_DEFAULT;
-                            if (approverType.equals(ENTITY_TYPE_ROLES)) {
-                                try {
-                                    List<UserBasicInfo> userListOfRole =
-                                            WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService()
-                                                    .getUserListOfRole(approverIdentifier, tenantDomain);
-                                    if (userListOfRole.size() == 1) {
-                                        taskStatus = WorkflowEngineConstants.ParameterName.TASK_STATUS_DEFAULT;
-                                    } else {
-                                        taskStatus = WorkflowEngineConstants.ParameterName.TASK_STATUS_READY;
-                                    }
-                                } catch (IdentityRoleManagementException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
                             approvalTaskDAO.addApproversOfRequest(taskId, workflowRequestId, workflowId,
-                                    approverType, approverIdentifier, taskStatus);
-                            taskIdsOfCurrentStep.add(taskId);
+                                    approverType,
+                                    approverIdentifier, WorkflowEngineConstants.TaskStatus.READY.toString());
                         }
-
                     }
                 }
-            }
-        }
-        if (approverCountInCurrentStep > 1) {
-            for (String taskId : taskIdsOfCurrentStep) {
-                approvalTaskDAO.updateApprovalTaskStatus(taskId,
-                        WorkflowEngineConstants.ParameterName.TASK_STATUS_READY);
             }
         }
     }
@@ -301,10 +271,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         List<String> roleIds = getAssignedRoleIds(userId, tenantDomain);
         entityIds.addAll(roleIds);
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         if (statusList == null || statusList.isEmpty()) {
-            return approvalTaskDAO.getApprovalTaskDetailsList(entityIds, limit, offset);
+            return approvalTaskDAO.getApprovalTaskDetailsList(entityIds, limit, offset, tenantId);
         } else {
-            return approvalTaskDAO.getApprovalTaskDetailsListByStatus(entityIds, statusList, limit, offset);
+            return approvalTaskDAO.getApprovalTaskDetailsListByStatus(entityIds, statusList, limit, offset, tenantId);
         }
     }
 
@@ -419,12 +390,22 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
            parameters, then we need to add more approval tasks for the next step. Otherwise,
            we can complete the workflow request with an approved status. */
         if (stepValue < getNumberOfApprovalStepsFromWorkflowParameters(approvalWorkflowParameterList)) {
-            WorkflowRequest workflowRequest = new WorkflowRequest();
-            workflowRequest.setUuid(workflowRequestId);
+            WorkflowRequest workflowRequest = buildWorkflowRequest(workflowRequestId);
             addApprovalTasksForWorkflowRequest(workflowRequest, approvalWorkflowParameterList);
         } else {
             completeWorkflowRequest(workflowRequestId, ApprovalTaskServiceImpl.APPROVED);
         }
+    }
+
+    private static WorkflowRequest buildWorkflowRequest(String workflowRequestId) {
+
+        WorkflowRequest workflowRequest = new WorkflowRequest();
+        RequestParameter requestParameter = new RequestParameter();
+        requestParameter.setName(WorkflowEngineConstants.ParameterName.REQUEST_ID);
+        requestParameter.setValue(workflowRequestId);
+        workflowRequest.setRequestParameters(Collections.singletonList(requestParameter));
+        workflowRequest.setUuid(workflowRequestId);
+        return workflowRequest;
     }
 
     private void handleReject(String approvalTaskId) throws WorkflowEngineServerException {
@@ -472,13 +453,16 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 if (WorkflowEngineConstants.APPROVER_TYPE_USERS.equals(approverType)) {
                     approvalTaskDAO.updateApprovalTaskStatus(updatedApprovalTaskId, reservedStatus);
                 } else if (WorkflowEngineConstants.APPROVER_TYPE_ROLES.equals(approverType)) {
+                    // Create a new task for the user who claimed the task.
                     String newTaskId = UUID.randomUUID().toString();
                     approvalTaskDAO.addApproversOfRequest(newTaskId, workflowRequestID, workflowId,
                             ENTITY_TYPE_CLAIMED_USERS, userId, reservedStatus);
-                    approvalTaskDAO.updateApprovalTaskStatus(newTaskId, reservedStatus);
+
+                    // Update the status of the existing task to BLOCKED.
                     approvalTaskDAO.updateApprovalTaskStatus(updatedApprovalTaskId, blockedStatus);
                 }
             } else {
+                // Update the status of all existing tasks to BLOCKED.
                 approvalTaskDAO.updateApprovalTaskStatus(existingApprovalTaskId, blockedStatus);
             }
         }
@@ -504,9 +488,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private List<TaskParam> getRequestParameters(WorkflowRequest workflowRequest) throws WorkflowEngineException {
+    private List<PropertyDTO> getRequestParameters(WorkflowRequest workflowRequest) throws WorkflowEngineException {
 
-        List<TaskParam> taskParamsList = new ArrayList<>();
+        List<PropertyDTO> workflowRequestProperties = new ArrayList<>();
 
         for (RequestParameter param : workflowRequest.getRequestParameters()) {
             if (param.getName().equals(WorkflowEngineConstants.ParameterName.CREDENTIAL)) {
@@ -516,7 +500,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             if (value != null) {
                 String valueString = value.toString().trim();
                 String paramString = param.getName().trim();
-                TaskParam taskParam = new TaskParam();
                 if (ROLE_ID_PARAM_NAME.equals(param.getName())) {
                     String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
                     try {
@@ -525,10 +508,10 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                                 .getRoleManagementService().getRoleBasicInfoById(valueString, tenantDomain);
                         valueString = roleBasicInfo.getName();
                         if (RoleConstants.APPLICATION.equals(roleBasicInfo.getAudience())) {
-                            TaskParam taskParam1 = new TaskParam();
-                            taskParam1.setItemValue(roleBasicInfo.getAudienceName());
-                            taskParam1.setItemName(ROLE_ASSOCIATED_APPLICATION_PARAM_NAME);
-                            taskParamsList.add(taskParam1);
+                            PropertyDTO propertyDTO = new PropertyDTO();
+                            propertyDTO.setKey(ROLE_ASSOCIATED_APPLICATION_PARAM_NAME);
+                            propertyDTO.setValue(roleBasicInfo.getAudienceName());
+                            workflowRequestProperties.add(propertyDTO);
                         }
                     } catch (IdentityRoleManagementException e) {
                         throw new WorkflowEngineException(e.getMessage(), e);
@@ -549,81 +532,53 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                     } catch (UserStoreException e) {
                         throw new WorkflowEngineException(e.getMessage(), e);
                     }
+                } else if (CLAIMS_PROPERTY_NAME.equals(paramString)) {
+                    if (WorkflowDataType.STRING_STRING_MAP_TYPE.equals(param.getValueType()) &&
+                            param.getValue() != null) {
+                        Map<String, String> claimsMap = (Map<String, String>) param.getValue();
+
+                        List<LocalClaim> localClaims;
+                        try {
+                            localClaims = claimMetadataManagementService.getLocalClaims(
+                                    CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+                        } catch (ClaimMetadataException e) {
+                            log.error("Error while retrieving local claims for tenant: {}",
+                                    CarbonContext.getThreadLocalCarbonContext().getTenantDomain(), e);
+                            continue;
+                        }
+
+                        for (Map.Entry<String, String> entry : claimsMap.entrySet()) {
+                            String claimUri = entry.getKey();
+                            String claimValue = entry.getValue();
+                            String displayName = localClaims.stream()
+                                    .filter(localClaim -> localClaim.getClaimURI().equals(claimUri))
+                                    .map(localClaim -> localClaim.getClaimProperty(DISPLAY_NAME_PROPERTY))
+                                    .findFirst()
+                                    .orElse(claimUri);
+                            PropertyDTO propertyDTO = new PropertyDTO();
+                            propertyDTO.setKey(displayName);
+                            propertyDTO.setValue(claimValue);
+                            workflowRequestProperties.add(propertyDTO);
+                        }
+
+                    }
                 } else if (TENANT_DOMAIN_PARAM_NAME.equals(paramString)) {
                     // Skip these parameters as they are not required in the task parameters.
                     continue;
                 }
-                taskParam.setItemValue(valueString);
-                taskParam.setItemName(paramString);
-                taskParamsList.add(taskParam);
+                PropertyDTO propertyDTO = new PropertyDTO();
+                propertyDTO.setKey(paramString);
+                propertyDTO.setValue(valueString);
+                workflowRequestProperties.add(propertyDTO);
             }
         }
-        return taskParamsList;
+        return workflowRequestProperties;
     }
 
     private List<PropertyDTO> getPropertyDTOs(Map<String, String> props) {
 
         return props.entrySet().stream().map(p -> getPropertyDTO(p.getKey(), p.getValue()))
                 .collect(Collectors.toList());
-    }
-
-    private List<PropertyDTO> getPropertyDTOs(List<TaskParam> props) {
-
-        List<PropertyDTO> propertyDTO = props.stream().map(p -> getPropertyDTO(p.getItemName(), p.getItemValue()))
-                .collect(Collectors.toList());
-
-        // Check if the claim property exists in the properties list and add new claim_UI property.
-        propertyDTO.stream().filter(property -> CLAIMS_PROPERTY_NAME.equalsIgnoreCase((property.getKey()))).findFirst().
-                ifPresent(claimProperty -> {
-                    PropertyDTO claimUIProperty = new PropertyDTO();
-                    claimUIProperty.setKey(CLAIMS_UI_PROPERTY_NAME);
-                    claimUIProperty.setValue(getClaimsDisplayNames(claimProperty.getValue()));
-                    propertyDTO.add(claimUIProperty);
-                });
-
-        return propertyDTO;
-    }
-
-    private String getClaimsDisplayNames(String claims) {
-
-        StringBuilder claimDisplayNames = new StringBuilder();
-
-        // Remove the square brackets and split the claims by comma.
-        if (claims.startsWith("{") && claims.endsWith("}")) {
-            claims = claims.substring(1, claims.length() - 1);
-        }
-
-        // Split the claims by comma and iterate through each claim.
-        String[] claimArray = claims.split(COMMA_SEPARATOR);
-
-        List<LocalClaim> localClaims;
-        try {
-            localClaims = claimMetadataManagementService.getLocalClaims(
-                            CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-        } catch (ClaimMetadataException e) {
-            log.error("Error while retrieving local claims for tenant: {}",
-                    CarbonContext.getThreadLocalCarbonContext().getTenantDomain(), e);
-            return claims; // Return original claims if unable to retrieve local claims.
-        }
-
-        for (String claim: claimArray) {
-            String[] claimParts = claim.split("=");
-            String claimUri = claimParts[0].trim();
-            String claimValue = claimParts[1].trim();
-
-            String displayName = localClaims.stream()
-                            .filter(localClaim -> localClaim.getClaimURI().equals(claimUri))
-                            .map(localClaim -> localClaim.getClaimProperty(DISPLAY_NAME_PROPERTY))
-                            .findFirst()
-                            .orElse(claimUri);
-            claimDisplayNames.append(displayName).append("=").append(claimValue).append(", ");
-        }
-
-        // Remove the last comma and space if present.
-        if (claimDisplayNames.length() > 0) {
-            claimDisplayNames.setLength(claimDisplayNames.length() - 2);
-        }
-        return claimDisplayNames.toString();
     }
 
     private PropertyDTO getPropertyDTO(String key, String value) {
