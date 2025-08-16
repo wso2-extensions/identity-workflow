@@ -73,12 +73,14 @@ public class WorkflowEngineConstants {
         public static final String GET_APPROVAL_TASK_DETAILS_FROM_APPROVER =
                 "SELECT TASK_ID, EVENT_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION INNER JOIN WF_REQUEST " +
                         "ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
-                        "WHERE APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") " +
+                        "WHERE WF_REQUEST.TENANT_ID = :" + SQLPlaceholders.TENANT_ID_PLACEHOLDER + "; AND " +
+                        "APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") " +
                         "ORDER BY WF_REQUEST.UPDATED_AT DESC";
         public static final String GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES =
                 "SELECT TASK_ID, EVENT_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION INNER JOIN WF_REQUEST " +
                         "ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
-                        "WHERE APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") AND " +
+                        "WHERE WF_REQUEST.TENANT_ID = :" + SQLPlaceholders.TENANT_ID_PLACEHOLDER + "; AND " +
+                        "APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") AND " +
                         "TASK_STATUS IN (" + SQLPlaceholders.STATUS_LIST_PLACEHOLDER + ") " +
                         "ORDER BY WF_REQUEST.UPDATED_AT DESC";
         public static final String GET_TASK_STATUS = "SELECT DISTINCT TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION " +
@@ -98,7 +100,8 @@ public class WorkflowEngineConstants {
         public static final String ENTITY_ID_PLACEHOLDER_PREFIX = "ENTITY_ID_";
         public static final String STATUS_LIST_PLACEHOLDER = "_STATUS_LIST_";
         public static final String STATUS_PLACEHOLDER_PREFIX = "STATUS_";
-      }
+        public static final String TENANT_ID_PLACEHOLDER = "TENANT_ID";
+    }
 
     /**
      * Holds constant parameter names.
@@ -106,11 +109,7 @@ public class WorkflowEngineConstants {
     public static class ParameterName {
 
         public static final String USER_AND_ROLE_STEP = "ApprovalSteps";
-        public static final String TASK_STATUS_DEFAULT = "RESERVED";
-        public static final String TASK_STATUS_READY = "READY";
         public static final String REQUEST_ID = "REQUEST ID";
-        public static final String TASK_SUBJECT = "ApprovalTaskSubject";
-        public static final String TASK_DESCRIPTION = "ApprovalTaskDescription";
         public static final String PRIORITY = "High";
         public static final String APPROVAL_TASK = "Approval task";
         public static final String ASSIGNEE_TYPE = "Type";
@@ -121,7 +120,6 @@ public class WorkflowEngineConstants {
         public static final String ENTITY_TYPE_USERS = "users";
         public static final String ENTITY_TYPE_CLAIMED_USERS = "claimedUsers";
         public static final String CLAIMS_PROPERTY_NAME = "Claims";
-        public static final String CLAIMS_UI_PROPERTY_NAME = "ClaimsUI";
     }
 
     /**
