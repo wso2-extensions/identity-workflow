@@ -306,7 +306,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
                     }, namedPreparedStatement -> {
-                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER , tenantId);
+                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER, tenantId);
                         for (int i = 0; i < entityIds.size(); i++) {
                             namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
                         }
@@ -353,7 +353,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
                     }, namedPreparedStatement -> {
-                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER , tenantId);
+                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER, tenantId);
                         for (int i = 0; i < entityIds.size(); i++) {
                             namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
                         }
