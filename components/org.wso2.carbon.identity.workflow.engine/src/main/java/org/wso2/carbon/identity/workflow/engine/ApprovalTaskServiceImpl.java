@@ -138,7 +138,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
             /* If the task is in APPROVED state, skip adding it to the processedRequestIds set as there can be tasks in
                READY / RESERVED state for the same workflow request when it is a multistep approval process. */
-            if (!WorkflowEngineConstants.TaskStatus.APPROVED.name().equals(approvalTaskSummaryDTO.getApprovalStatus())) {
+            if (!WorkflowEngineConstants.TaskStatus.APPROVED.name()
+                    .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
                 processedRequestIds.add(approvalTaskSummaryDTO.getRequestId());
             }
 
