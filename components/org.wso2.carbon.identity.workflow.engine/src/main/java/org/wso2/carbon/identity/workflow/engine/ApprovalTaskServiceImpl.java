@@ -121,11 +121,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
                         .equals(approvalTask.getApprovalStatus())).map(ApprovalTaskSummaryDTO::getRequestId)
                 .collect(Collectors.toList());
-        Set<String> duplicatedWorkflowRequestIds = new HashSet<>();
+        Set<String> processedRequestIds = new HashSet<>();
         Iterator<ApprovalTaskSummaryDTO> iterator = approvalTaskSummaryDTOS.iterator();
         while (iterator.hasNext()) {
             ApprovalTaskSummaryDTO approvalTaskSummaryDTO = iterator.next();
-            if (duplicatedWorkflowRequestIds.contains(approvalTaskSummaryDTO.getRequestId())) {
+            if (processedRequestIds.contains(approvalTaskSummaryDTO.getRequestId())) {
                 iterator.remove();
                 continue;
             }
@@ -136,7 +136,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 continue;
             }
 
-            duplicatedWorkflowRequestIds.add(approvalTaskSummaryDTO.getRequestId());
+            /* If the task is in APPROVED state, skip adding it to the processedRequestIds set as there can be tasks in
+               READY / RESERVED state for the same workflow request when it is a multistep approval process. */
+            if (!WorkflowEngineConstants.TaskStatus.APPROVED.name().equals(approvalTaskSummaryDTO.getApprovalStatus())) {
+                processedRequestIds.add(approvalTaskSummaryDTO.getRequestId());
+            }
 
             WorkflowRequest request = getWorkflowRequest(approvalTaskSummaryDTO.getRequestId());
 
