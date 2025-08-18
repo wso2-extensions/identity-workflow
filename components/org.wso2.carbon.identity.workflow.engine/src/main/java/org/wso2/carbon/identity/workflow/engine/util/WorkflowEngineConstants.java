@@ -126,15 +126,21 @@ public class WorkflowEngineConstants {
      * Represents the possible statuses of an approval task.
      */
     public enum TaskStatus {
+
+        /** Task is ready to be assigned and worked on */
         READY,
+
+        /** The Task has been reserved/claimed by an approver but not yet completed */
         RESERVED,
-        COMPLETED,
+
+        /** The Task has been approved by the assigned approver */
+        APPROVED,
+
+        /** Task is blocked and cannot proceed */
         BLOCKED,
+
+        /** The Task has been rejected by the assigned approver */
         REJECTED;
-
-        TaskStatus() {
-
-        }
     }
 
     /**

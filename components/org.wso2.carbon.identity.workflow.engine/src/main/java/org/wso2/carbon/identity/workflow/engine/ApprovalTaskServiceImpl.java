@@ -117,26 +117,34 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
 
         List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(statusList, userId, limit, offset);
+        // Filter the reserved workflow requests to filter out the READY tasks corresponding to the same request.
         List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
                 .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
                         .equals(approvalTask.getApprovalStatus())).map(ApprovalTaskSummaryDTO::getRequestId)
                 .collect(Collectors.toList());
-        Set<String> duplicatedWorkflowRequestIds = new HashSet<>();
+        Set<String> processedRequestIds = new HashSet<>();
         Iterator<ApprovalTaskSummaryDTO> iterator = approvalTaskSummaryDTOS.iterator();
         while (iterator.hasNext()) {
             ApprovalTaskSummaryDTO approvalTaskSummaryDTO = iterator.next();
-            if (duplicatedWorkflowRequestIds.contains(approvalTaskSummaryDTO.getRequestId())) {
+            if (processedRequestIds.contains(approvalTaskSummaryDTO.getRequestId())) {
                 iterator.remove();
                 continue;
             }
+            /* The tasks with READY state where the corresponding workflow request already has a RESERVED task should
+               be skipped to avoid duplication in the list. */
             if (reservedWorkflowRequests.contains(approvalTaskSummaryDTO.getRequestId()) &&
-                    !WorkflowEngineConstants.TaskStatus.RESERVED.name()
+                    WorkflowEngineConstants.TaskStatus.READY.name()
                             .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
                 iterator.remove();
                 continue;
             }
 
-            duplicatedWorkflowRequestIds.add(approvalTaskSummaryDTO.getRequestId());
+            /* If the task is in APPROVED state, skip adding it to the processedRequestIds set as there can be tasks in
+               READY / RESERVED state for the same workflow request when it is a multistep approval process. */
+            if (!WorkflowEngineConstants.TaskStatus.APPROVED.name()
+                    .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
+                processedRequestIds.add(approvalTaskSummaryDTO.getRequestId());
+            }
 
             WorkflowRequest request = getWorkflowRequest(approvalTaskSummaryDTO.getRequestId());
 
