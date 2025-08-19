@@ -263,6 +263,17 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
+    @Override
+    public void deletePendingApprovalTasks(String workflowId) throws WorkflowEngineException {
+
+        if (StringUtils.isBlank(workflowId)) {
+            throw new WorkflowEngineClientException(
+                    WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getCode(),
+                    WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getDescription());
+        }
+        approvalTaskDAO.deletePendingApprovalTasks(workflowId);
+    }
+
     /**
      * Retrieves all the approval tasks assigned to the user.
      *

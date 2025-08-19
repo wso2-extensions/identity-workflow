@@ -49,6 +49,8 @@ public class WorkflowEngineConstants {
                 "WHERE EVENT_ID = ? AND TASK_ID != ?";
         public static final String DELETE_APPROVAL_TASKS_OF_WORKFLOW_REQUEST = "DELETE FROM " +
                 "WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ?";
+        public static final String DELETE_PENDING_APPROVAL_TASKS_OF_WORKFLOW_REQUEST = "DELETE FROM " +
+                "WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ? AND TASK_STATUS IN ('READY', 'RESERVED', 'BLOCKED')";
         public static final String ADD_CURRENT_STEP_FOR_EVENT = "INSERT INTO WF_WORKFLOW_APPROVAL_STATE " +
                 "(EVENT_ID,WORKFLOW_ID, CURRENT_STEP) VALUES (?,?,1)";
         public static final String GET_CURRENT_STEP = "SELECT CURRENT_STEP FROM WF_WORKFLOW_APPROVAL_STATE WHERE " +
