@@ -190,7 +190,7 @@ public interface ApprovalTaskDAO {
     /**
      * Delete all pending approval tasks for a given workflow request ID.
      *
-     * @param workflowRequestId The workflow request ID that need to be checked.
+     * @param workflowRequestId The workflow request ID that needs to be checked.
      * @throws WorkflowEngineServerException if an error occurs while deleting the pending approval tasks.
      */
     void deletePendingApprovalTasks(String workflowRequestId) throws WorkflowEngineServerException;
