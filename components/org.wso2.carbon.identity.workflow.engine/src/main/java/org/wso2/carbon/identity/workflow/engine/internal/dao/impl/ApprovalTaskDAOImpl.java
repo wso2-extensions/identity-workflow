@@ -484,6 +484,24 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
         return workflowId;
     }
 
+    @Override
+    public void deletePendingApprovalTasks(String workflowRequestId) throws WorkflowEngineServerException {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        try {
+            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries
+                            .DELETE_PENDING_APPROVAL_TASKS_OF_WORKFLOW_REQUEST,
+                    preparedStatement -> preparedStatement.setString(1, workflowRequestId));
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error while deleting the pending approval tasks of workflow " +
+                            "request: %s", workflowRequestId);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+    }
+
     private void setPreparedStatementForStatusOfRequest(String taskStatus, String taskId,
                                                         PreparedStatement preparedStatement) throws SQLException {
 

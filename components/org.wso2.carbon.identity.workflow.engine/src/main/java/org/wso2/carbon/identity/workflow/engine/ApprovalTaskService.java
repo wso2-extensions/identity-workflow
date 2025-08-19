@@ -69,4 +69,12 @@ public interface ApprovalTaskService {
      */
     void addApprovalTasksForWorkflowRequest(WorkflowRequest workflowRequest, List<Parameter> parameterList)
             throws WorkflowEngineException;
+
+    /**
+     * Delete pending approval tasks for a given workflow ID.
+     *
+     * @param workflowId the ID of the workflow for which pending approval tasks are to be deleted.
+     * @throws WorkflowEngineException
+     */
+    void deletePendingApprovalTasks(String workflowId) throws WorkflowEngineException;
 }
