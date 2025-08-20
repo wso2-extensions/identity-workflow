@@ -117,7 +117,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
 
         List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(statusList, userId, limit, offset);
-        // Filter the reserved workflow requests to filter out the READY tasks corresponding to the same request.
+        // Filter the reserved workflow requests to filter out the BLOCKED tasks corresponding to the same request.
         List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
                 .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
                         .equals(approvalTask.getApprovalStatus())).map(ApprovalTaskSummaryDTO::getRequestId)
@@ -130,10 +130,10 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 iterator.remove();
                 continue;
             }
-            /* The tasks with READY state where the corresponding workflow request already has a RESERVED task should
+            /* The tasks with BLOCKED state where the corresponding workflow request already has a RESERVED task should
                be skipped to avoid duplication in the list. */
             if (reservedWorkflowRequests.contains(approvalTaskSummaryDTO.getRequestId()) &&
-                    WorkflowEngineConstants.TaskStatus.READY.name()
+                    WorkflowEngineConstants.TaskStatus.BLOCKED.name()
                             .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
                 iterator.remove();
                 continue;
