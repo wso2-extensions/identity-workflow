@@ -102,6 +102,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private static final String TENANT_DOMAIN_PARAM_NAME = "Tenant Domain";
     private static final String AUDIENCE_ID_PARAM_NAME = "Audience ID";
     private static final String COMMA_SEPARATOR = ",";
+    private static final String ROLE_NOT_FOUND_ERROR_CODE = "RMA-60007";
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
@@ -533,7 +534,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                             workflowRequestProperties.add(propertyDTO);
                         }
                     } catch (IdentityRoleManagementException e) {
-                        throw new WorkflowEngineException(e.getMessage(), e);
+                        if (StringUtils.equals(ROLE_NOT_FOUND_ERROR_CODE, e.getErrorCode())) {
+                            valueString = StringUtils.EMPTY;
+                        } else {
+                            throw new WorkflowEngineException(e.getMessage(), e);
+                        }
                     }
                 } else if (USERS_TO_BE_ADDED_PARAM_NAME.equals(paramString)
                         || USERS_TO_BE_DELETED_PARAM_NAME.equals(paramString)) {
@@ -546,6 +551,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                             List<String> userNames = userStoreManager.getUserNamesFromUserIDs((List<String>) value);
                             if (CollectionUtils.isNotEmpty(userNames)) {
                                 valueString = String.join(COMMA_SEPARATOR, userNames);
+                            } else {
+                                valueString = StringUtils.EMPTY;
                             }
                         }
                     } catch (UserStoreException e) {
