@@ -43,8 +43,8 @@ public class WorkflowEngineConstants {
 
         public static final String ADD_APPROVAL_LIST_RELATED_TO_USER = "INSERT INTO WF_WORKFLOW_APPROVAL_RELATION " +
                 "(TASK_ID,EVENT_ID,WORKFLOW_ID,APPROVER_TYPE,APPROVER_NAME, TASK_STATUS) VALUES (?,?,?,?,?,?)";
-        public static final String GET_APPROVER_DETAILS_BY_TASK_ID = "SELECT APPROVER_TYPE, APPROVER_NAME FROM " +
-                "WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
+        public static final String GET_APPROVER_DETAILS_BY_TASK_ID = "SELECT APPROVER_TYPE, APPROVER_NAME, " +
+                "TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String DELETE_APPROVAL_TASK_BY_TASK_ID = "DELETE FROM WF_WORKFLOW_APPROVAL_RELATION " +
                 "WHERE EVENT_ID = ? AND TASK_ID != ?";
         public static final String DELETE_APPROVAL_TASKS_OF_WORKFLOW_REQUEST = "DELETE FROM " +
@@ -188,7 +188,8 @@ public class WorkflowEngineConstants {
                 "Only [CLAIM, RELEASE, APPROVED, REJECTED] are acceptable."),
         USER_ERROR_TASK_ALREADY_CLAIMED("SWE_10002", "Task already claimed by another user."),
         USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED("SWE_10003", "Approval task is not assigned to the " +
-                "user.");
+                "user."),
+        USER_ERROR_TASK_ALREADY_COMPLETED("SWE_10004", "Task is already completed.");
 
         private final String code;
         private final String description;
