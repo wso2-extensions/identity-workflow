@@ -25,6 +25,7 @@ public class ApproverDTO {
 
     private String approverName;
     private String approverType;
+    private String taskStatus;
 
     public String getApproverName() {
 
@@ -44,5 +45,15 @@ public class ApproverDTO {
     public void setApproverType(String approverType) {
 
         this.approverType = approverType;
+    }
+
+    public String getTaskStatus() {
+
+        return taskStatus;
+    }
+
+    public void setTaskStatus(String taskStatus) {
+
+        this.taskStatus = taskStatus;
     }
 }
