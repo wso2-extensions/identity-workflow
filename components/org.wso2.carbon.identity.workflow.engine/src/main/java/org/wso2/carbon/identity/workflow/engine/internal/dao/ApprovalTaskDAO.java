@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.workflow.engine.internal.dao;
 
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskRelationDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
@@ -54,7 +55,7 @@ public interface ApprovalTaskDAO {
      * Delete all the approval tasks except the given approval task ID.
      *
      * @param workflowRequestId The workflow request ID that need to be checked.
-     * @param approvalTaskId The approval task ID that need to be excluded when deleting.
+     * @param approvalTaskId    The approval task ID that need to be excluded when deleting.
      */
     void deleteApprovalTasksOfWorkflowRequestExceptGivenId(String workflowRequestId, String approvalTaskId)
             throws WorkflowEngineServerException;
@@ -105,9 +106,9 @@ public interface ApprovalTaskDAO {
      * Returns the approval task details given the approver type and name.
      *
      * @param entityIds list of entity IDs.
-     * @param limit maximum number of results to return.
-     * @param offset offset for pagination.
-     * @param tenantId tenant ID.
+     * @param limit     maximum number of results to return.
+     * @param offset    offset for pagination.
+     * @param tenantId  tenant ID.
      * @return events list.
      * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
      */
@@ -117,12 +118,12 @@ public interface ApprovalTaskDAO {
     /**
      * Returns the approval task details given the approver type and status.
      *
-     * @param entityIds   List of entity IDs.
-     * @param statusList  List of request statuses.
-     * @param limit       Maximum number of results to return.
-     * @param offset      Offset for pagination.
-     * @param tenantId    Tenant ID.
-     * @return            List of approval task summary DTOs.
+     * @param entityIds  List of entity IDs.
+     * @param statusList List of request statuses.
+     * @param limit      Maximum number of results to return.
+     * @param offset     Offset for pagination.
+     * @param tenantId   Tenant ID.
+     * @return List of approval task summary DTOs.
      * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
      */
     List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(List<String> entityIds, List<String> statusList,
@@ -195,5 +196,21 @@ public interface ApprovalTaskDAO {
      */
     void deletePendingApprovalTasks(String workflowRequestId) throws WorkflowEngineServerException;
 
-}
+    /**
+     * Retrieve the all events/requests corresponding to a workflow ID.
+     *
+     * @param workflowId the workflow ID that need to be checked.
+     * @return approval tasks.
+     */
+    List<String> getPendingRequestsByWorkflowId(String workflowId) throws WorkflowEngineServerException;
 
+    /**
+     * Retrieve the approval task relations corresponding to a workflow request ID.
+     *
+     * @param requestId the workflow request ID that need to be checked.
+     * @return List of ApprovalTaskRelationDTO objects.
+     * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task relations.
+     */
+    List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByRequestId(String requestId)
+            throws WorkflowEngineServerException;
+}

@@ -23,10 +23,11 @@
         <groupId>org.wso2.carbon.identity.workflow</groupId>
          <version>1.0.16</version>
          <relativePath>../../pom.xml</relativePath>
-     </parent>
-     <artifactId>org.wso2.carbon.identity.workflow.engine</artifactId>
-     <packaging>bundle</packaging>
-     <name>WSO2 Carbon - Workflow Engine</name>
+    </parent>
+    <artifactId>org.wso2.carbon.identity.workflow.engine</artifactId>
+    <version>1.0.16-custom</version>
+    <packaging>bundle</packaging>
+    <name>WSO2 Carbon - Workflow Engine</name>
 
      <dependencies>
          <dependency>

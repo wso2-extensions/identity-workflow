@@ -78,4 +78,16 @@ public interface ApprovalTaskService {
      *                                 is invalid.
      */
     void deletePendingApprovalTasks(String workflowId) throws WorkflowEngineException;
+
+    /**
+     * Update approval tasks when there is a change in the workflow associated with a request.
+     *
+     * @param workflowId the ID of the old workflow.
+     * @param newWorkflowParams the parameters of the new workflow.
+     * @param oldWorkflowParams the parameters of the old workflow.
+     * @throws WorkflowEngineException if an error occurs while updating approval tasks or if the workflow IDs are
+     *                                 invalid.
+     */
+    void updateApprovalTasksOnWorkflowUpdate(String workflowId, List<Parameter> newWorkflowParams,
+                                             List<Parameter> oldWorkflowParams) throws WorkflowEngineException;
 }

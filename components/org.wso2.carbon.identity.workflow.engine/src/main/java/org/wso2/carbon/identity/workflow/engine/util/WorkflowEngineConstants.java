@@ -35,6 +35,7 @@ public class WorkflowEngineConstants {
     public static final String RELATIONSHIP_ID_IN_REQUEST_COLUMN = "RELATIONSHIP_ID";
     public static final String APPROVER_TYPE_USERS = "users";
     public static final String APPROVER_TYPE_ROLES = "roles";
+    public static final String REQUEST_ID_COLUMN = "REQUEST_ID";
 
     /**
      * SQL Query definitions.
@@ -91,6 +92,10 @@ public class WorkflowEngineConstants {
         public static final String GET_CREATED_TIME_IN_MILL = "SELECT CREATED_AT FROM WF_REQUEST WHERE UUID= ?";
         public static final String GET_REQUEST_ID_OF_RELATIONSHIP = "SELECT RELATIONSHIP_ID FROM " +
                 "WF_WORKFLOW_REQUEST_RELATION WHERE REQUEST_ID = ?";
+        public static final String GET_ALL_UNFINISHED_APPROVAL_EVENTS_BY_WORKFLOW_ID = "SELECT REQUEST_ID FROM " +
+                "WF_WORKFLOW_REQUEST_RELATION WHERE WORKFLOW_ID = ? AND STATUS = 'PENDING'";
+        public static final String GET_APPROVAL_TASK_RELATIONS_BY_REQUEST_ID = "SELECT TASK_ID, APPROVER_NAME, " +
+                "TASK_STATUS, APPROVER_TYPE FROM WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ?";
     }
 
     /**
