@@ -284,8 +284,14 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         // Get the list of pending requests corresponding to given workflow ID.
         List<String> requestList = approvalTaskDAO.getPendingRequestsByWorkflowId(workflowId);
 
+        // APPROVER_NAME list for each step
+        Map<Integer, List<String>> newParamValuesForApprovalSteps =
+                Utils.getParamValuesForApprovalSteps(newWorkflowParams);
         // Get the modified steps.
         List<Integer> modifiedSteps = Utils.getModifiedApprovalSteps(newWorkflowParams, oldWorkflowParams);
+
+        // Retrieving the tenant domain to validate reserved task users.
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
         // For each request, delete the existing approval tasks and
         // add new tasks based on the updated workflow parameters.
@@ -326,13 +332,34 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                  */
                 String userId = reservedTask.getApproverName();
 
-                // Get all 'READY' status tasks for the user and if the request is present, claim it.
-                List<ApprovalTaskSummaryDTO> userTasks = getAllAssignedTasks(Collections.singletonList("READY"), userId,
-                        Integer.MAX_VALUE, 0);
-                // If the request is present in the user's task list, claim it.
-                for (ApprovalTaskSummaryDTO userTask : userTasks) {
-                    if (requestId.equals(userTask.getRequestId())) {
-                        handleClaim(userTask.getId());
+                // Get the new workflow APPROVER_NAME list for the current step.
+                List<String> approverNamesForCurrentStep =
+                        newParamValuesForApprovalSteps.get(currentStep);
+                // Get the user's roles.
+                List<String> entityIds = getAssignedRoleIds(userId, tenantDomain);
+                // Add userId as eligible entity if the workflow has USER.
+                entityIds.add(userId);
+
+                // Check if the user is still eligible to approve the request,
+                // by checking if any entityId is present in the approverNamesForCurrentStep.
+                for (String entityId : entityIds) {
+                    if (approverNamesForCurrentStep != null && approverNamesForCurrentStep.contains(entityId)) {
+                        // Get the tasks respect to the request ID with status 'READY'.
+                        List<ApprovalTaskRelationDTO> approvalTasks =
+                                approvalTaskDAO.getApprovalTaskRelationsByRequestId(requestId);
+
+                        // Get the task id with the entityId.
+                        String taskId = approvalTasks.stream()
+                                .filter(dto -> entityId.equals(dto.getApproverName()) && "READY".equals(dto
+                                        .getTaskStatus()))
+                                .map(ApprovalTaskRelationDTO::getTaskId)
+                                .findFirst()
+                                .orElse(null);
+
+                        // If a task is found, perform reservation.
+                        if (taskId != null) {
+                            handleClaim(taskId);
+                        }
                         break;
                     }
                 }
