@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.workflow.engine.internal;
 
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.workflow.engine.ApprovalTaskService;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
 import org.wso2.carbon.identity.workflow.mgt.workflow.AbstractWorkflow;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -33,6 +34,7 @@ public class WorkflowEngineServiceDataHolder {
 
     private static WorkflowEngineServiceDataHolder instance = new WorkflowEngineServiceDataHolder();
 
+    private ApprovalTaskService approvalTaskService;
     private WorkflowManagementService workflowManagementService;
     private RoleManagementService roleManagementService;
     private RealmService realmService;
@@ -81,5 +83,15 @@ public class WorkflowEngineServiceDataHolder {
     public void setRealmService(RealmService realmService) {
 
         this.realmService = realmService;
+    }
+
+    public ApprovalTaskService getApprovalTaskService() {
+
+        return approvalTaskService;
+    }
+
+    public void setApprovalTaskService(ApprovalTaskService approvalTaskService) {
+
+        this.approvalTaskService = approvalTaskService;
     }
 }
