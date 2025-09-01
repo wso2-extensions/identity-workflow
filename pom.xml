@@ -177,7 +177,7 @@
                     <groupId>org.wso2.carbon.identity.framework</groupId>
                     <artifactId>org.wso2.carbon.user.mgt</artifactId>
                     <version>${carbon.identity.framework.version}</version>
-                </dependency>
+            </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>identity-framework</artifactId>

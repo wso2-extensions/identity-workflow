@@ -524,6 +524,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     @Override
     public List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByRequestId(String requestId)
             throws WorkflowEngineServerException {
+
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
             return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.

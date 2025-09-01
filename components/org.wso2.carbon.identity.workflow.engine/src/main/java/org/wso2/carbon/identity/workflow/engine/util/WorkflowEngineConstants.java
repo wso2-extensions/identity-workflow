@@ -174,7 +174,6 @@ public class WorkflowEngineConstants {
         /*
          Error messages for client errors - 400 series
          */
-
         TASK_NOT_FOUND("WFE_40001", "Invalid event ID"),
         WORKFLOW_ID_NOT_FOUND("WFE_40002", "The workflow Id is not valid"),
         USER_ERROR_NON_EXISTING_TASK_ID("WFE_40003", "Task does not exist."),
@@ -183,6 +182,7 @@ public class WorkflowEngineConstants {
         USER_ERROR_TASK_ALREADY_CLAIMED("WFE_40005", "Task already claimed by another user."),
         USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED("WFE_40006", "Approval task is not assigned to the " +
                 "user."),
+        USER_ERROR_TASK_ALREADY_COMPLETED("WFE_40007", "Task is already completed."),
 
         /*
          Error messages for server errors - 500 series
