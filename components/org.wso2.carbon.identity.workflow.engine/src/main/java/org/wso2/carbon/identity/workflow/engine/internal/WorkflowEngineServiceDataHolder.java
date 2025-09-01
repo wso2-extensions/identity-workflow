@@ -34,7 +34,6 @@ public class WorkflowEngineServiceDataHolder {
 
     private static WorkflowEngineServiceDataHolder instance = new WorkflowEngineServiceDataHolder();
 
-    private ApprovalTaskService approvalTaskService;
     private WorkflowManagementService workflowManagementService;
     private RoleManagementService roleManagementService;
     private RealmService realmService;
@@ -83,15 +82,5 @@ public class WorkflowEngineServiceDataHolder {
     public void setRealmService(RealmService realmService) {
 
         this.realmService = realmService;
-    }
-
-    public ApprovalTaskService getApprovalTaskService() {
-
-        return approvalTaskService;
-    }
-
-    public void setApprovalTaskService(ApprovalTaskService approvalTaskService) {
-
-        this.approvalTaskService = approvalTaskService;
     }
 }

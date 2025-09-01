@@ -57,7 +57,6 @@ public class WorkflowEngineServiceComponent {
                 DefaultApprovalWorkflowRequestExecutor.class, getMetaDataXML()), null);
         ApprovalTaskServiceImpl approvalTaskServiceImpl = new ApprovalTaskServiceImpl();
         bundleContext.registerService(ApprovalTaskServiceImpl.class, approvalTaskServiceImpl, null);
-        WorkflowEngineServiceDataHolder.getInstance().setApprovalTaskService(approvalTaskServiceImpl);
     }
 
     private String getMetaDataXML() {
