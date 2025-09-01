@@ -216,9 +216,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             default:
                 throw new WorkflowEngineClientException(
                         WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.
-                                getCode(),
+                                getDescription(),
                         WorkflowEngineConstants.ErrorMessages.USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE.
-                                getDescription());
+                                getCode());
         }
     }
 
@@ -271,8 +271,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         if (StringUtils.isBlank(workflowId)) {
             throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getDescription());
+                    WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getDescription(),
+                    WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getCode());
         }
         approvalTaskDAO.deletePendingApprovalTasks(workflowId);
     }
@@ -428,9 +428,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                     .getWorkflowRequest(requestId);
         } catch (WorkflowException e) {
             throw new WorkflowEngineException(
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_WORKFLOW_REQUEST.getCode(),
                     WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_WORKFLOW_REQUEST.
-                            getDescription());
+                            getDescription(),
+                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_WORKFLOW_REQUEST.getCode());
         }
     }
 
@@ -455,14 +455,20 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
         if (!isAssignedApprovalTask) {
             throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED.getCode(),
                     WorkflowEngineConstants.ErrorMessages.USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED.
-                            getDescription());
+                            getDescription(),
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED.getCode());
         }
-        if (WorkflowEngineConstants.TaskStatus.BLOCKED.name().equals(approvalTaskDAO.getApprovalTaskStatus(taskId))) {
+        if (WorkflowEngineConstants.TaskStatus.BLOCKED.name().equals(approverDTO.getTaskStatus())) {
             throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getDescription());
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getDescription(),
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getCode());
+        }
+        if (WorkflowEngineConstants.TaskStatus.APPROVED.name().equals(approverDTO.getTaskStatus())
+                || WorkflowEngineConstants.TaskStatus.REJECTED.name().equals(approverDTO.getTaskStatus())) {
+            throw new WorkflowEngineClientException(
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_COMPLETED.getDescription(),
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_COMPLETED.getCode());
         }
     }
 
@@ -551,8 +557,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         if (blockedStatus.equals(approvalTaskDAO.getApprovalTaskStatus(updatedApprovalTaskId))) {
             throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getCode(),
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getDescription());
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getDescription(),
+                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_TASK_ALREADY_CLAIMED.getCode());
         }
 
         String workflowRequestID = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(updatedApprovalTaskId);

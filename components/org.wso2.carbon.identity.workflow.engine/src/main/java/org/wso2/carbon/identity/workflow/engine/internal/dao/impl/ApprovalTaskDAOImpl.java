@@ -89,6 +89,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                         ApproverDTO approverDTO = new ApproverDTO();
                         approverDTO.setApproverName(resultSet.getString(WorkflowEngineConstants.APPROVER_NAME_COLUMN));
                         approverDTO.setApproverType(resultSet.getString(WorkflowEngineConstants.APPROVER_TYPE_COLUMN));
+                        approverDTO.setTaskStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approverDTO;
                     }, preparedStatement -> preparedStatement.setString(1, eventId));
         } catch (DataAccessException e) {
