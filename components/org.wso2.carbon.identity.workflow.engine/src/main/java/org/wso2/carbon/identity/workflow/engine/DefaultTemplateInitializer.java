@@ -64,8 +64,6 @@ public class DefaultTemplateInitializer implements TemplateInitializer {
 
         if (wfNameParameter != null) {
             processName = StringUtils.deleteWhitespace(wfNameParameter.getParamValue());
-            role = WorkflowManagementUtil
-                    .createWorkflowRoleName(StringUtils.deleteWhitespace(wfNameParameter.getParamValue()));
         }
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
