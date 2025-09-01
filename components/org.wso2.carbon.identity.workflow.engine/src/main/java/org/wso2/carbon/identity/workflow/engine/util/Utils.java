@@ -34,16 +34,16 @@ public class Utils {
 
         // Approval step number as key and list of parameter values as value.
         Map<Integer, List<String>> paramValuesForApprovalSteps = new HashMap<>();
-        String approverType;
+        String approverName;
         int step;
         if (parameterList != null) {
             for (Parameter parameter : parameterList) {
                 if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
                     String[] stepName = parameter.getqName().split("-");
                     step = Integer.parseInt(stepName[1]);
-                    approverType = stepName[stepName.length - 1];
+                    approverName = parameter.getParamValue();
                     paramValuesForApprovalSteps.computeIfAbsent(step, k -> new java.util.ArrayList<>())
-                            .add(approverType);
+                            .add(approverName);
                 }
             }
         }

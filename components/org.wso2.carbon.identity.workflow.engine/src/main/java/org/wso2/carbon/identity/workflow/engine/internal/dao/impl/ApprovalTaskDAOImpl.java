@@ -175,7 +175,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                         preparedStatement.setString(2, workflowId);
                     });
             if (stepExists == null) {
-                return 0;
+                return -1;
             }
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving currentStep from" +

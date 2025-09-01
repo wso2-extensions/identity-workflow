@@ -237,7 +237,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String approverType;
 
         int currentStep = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
-        if (currentStep == 0) {
+        if (currentStep == -1) {
             approvalTaskDAO.addApprovalTaskStep(workflowRequestId, workflowId);
             currentStep = 1;
         } else {
@@ -334,18 +334,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                         newParamValuesForApprovalSteps.get(currentStep);
 
                 // Retrieving the tenant domain of the user corresponding to the userId to validate reserved task users.
-                String tenantDomain;
-                try {
-                    tenantDomain = WorkflowEngineServiceDataHolder.getInstance().getRealmService()
-                            .getTenantManager().getDomain(IdentityTenantUtil.getTenantIdOfUser(userId));
-                } catch (UserStoreException e) {
-                    log.error("Error occurred while retrieving the tenant domain of the user.", e);
-                    throw new WorkflowEngineException (
-                            WorkflowEngineConstants.ErrorMessages
-                                    .ERROR_OCCURRED_WHILE_UPDATING_WORKFLOW_REQUEST.getCode(),
-                            WorkflowEngineConstants.ErrorMessages
-                                    .ERROR_OCCURRED_WHILE_UPDATING_WORKFLOW_REQUEST.getDescription());
-                }
+                String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 // Get the user's roles.
                 List<String> entityIds = getAssignedRoleIds(userId, tenantDomain);
                 // Add userId as eligible entity if the workflow has USER.
