@@ -290,9 +290,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         // Get the modified steps.
         List<Integer> modifiedSteps = Utils.getModifiedApprovalSteps(newWorkflowParams, oldWorkflowParams);
 
-        // Retrieving the tenant domain to validate reserved task users.
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-
         // For each request, delete the existing approval tasks and
         // add new tasks based on the updated workflow parameters.
         for (String requestId : requestList) {
@@ -335,6 +332,20 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 // Get the new workflow APPROVER_NAME list for the current step.
                 List<String> approverNamesForCurrentStep =
                         newParamValuesForApprovalSteps.get(currentStep);
+
+                // Retrieving the tenant domain of the user corresponding to the userId to validate reserved task users.
+                String tenantDomain;
+                try {
+                    tenantDomain = WorkflowEngineServiceDataHolder.getInstance().getRealmService()
+                            .getTenantManager().getDomain(IdentityTenantUtil.getTenantIdOfUser(userId));
+                } catch (UserStoreException e) {
+                    log.error("Error occurred while retrieving the tenant domain of the user.", e);
+                    throw new WorkflowEngineException (
+                            WorkflowEngineConstants.ErrorMessages
+                                    .ERROR_OCCURRED_WHILE_UPDATING_WORKFLOW_REQUEST.getCode(),
+                            WorkflowEngineConstants.ErrorMessages
+                                    .ERROR_OCCURRED_WHILE_UPDATING_WORKFLOW_REQUEST.getDescription());
+                }
                 // Get the user's roles.
                 List<String> entityIds = getAssignedRoleIds(userId, tenantDomain);
                 // Add userId as eligible entity if the workflow has USER.
