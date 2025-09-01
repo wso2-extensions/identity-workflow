@@ -78,65 +78,65 @@
      </dependencies>
 
      <build>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.felix</groupId>
-                    <artifactId>maven-bundle-plugin</artifactId>
-                    <version>3.2.0</version>
-                    <extensions>true</extensions>
-                    <configuration>
-                        <obrRepository>NONE</obrRepository>
-                        <instructions>
-                            <SCM-Revision>${buildNumber}</SCM-Revision>
-                            <Private-Package>
-                                org.wso2.carbon.identity.workflow.engine.internal,
-                            </Private-Package>
-                            <Import-Package>
-                                org.osgi.framework; version="${osgi.framework.import.version.range}",
-                                org.osgi.service.component; version="${osgi.service.component.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.util; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.bean; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.bean.metadata; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.dto; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.workflow; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.exception; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.dao; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.workflow.mgt.callback; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.role.v2.mgt.core; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.role.v2.mgt.core.exception; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.role.v2.mgt.core.model; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.core.util; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.claim.metadata.mgt; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.claim.metadata.mgt.exception; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.identity.claim.metadata.mgt.model; version="${carbon.identity.package.import.version.range}",
-                                org.wso2.carbon.utils.multitenancy; version="${carbon.kernel.package.import.version.range}",
-                                org.wso2.carbon.context; version="${carbon.kernel.package.import.version.range}",
-                                org.wso2.carbon.user.core.service; version="${carbon.kernel.package.import.version.range}",
-                                org.wso2.carbon.user.core.common; version="${carbon.kernel.package.import.version.range}",
-                                org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
-                                org.wso2.carbon.database.utils.jdbc; version ="${org.wso2.carbon.database.utils.version.range}",
-                                org.wso2.carbon.database.utils.jdbc.exceptions; version ="${org.wso2.carbon.database.utils.version.range}",
-                                org.wso2.carbon.identity.organization.management.service.exception; version="${org.wso2.identity.organization.mgt.import.version.range}",
-                                org.wso2.carbon.identity.organization.management.organization.user.sharing.util; version="${org.wso2.identity.organization.mgt.import.version.range}",
-                                org.apache.commons.logging,
-                                org.apache.commons.lang,
-                                org.apache.commons.collections
-                            </Import-Package>
-                            <Export-Package>
-                                !org.wso2.carbon.identity.workflow.engine.internal,
-                                org.wso2.carbon.identity.workflow.engine.*;
-                            </Export-Package>
-                        </instructions>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>findbugs-maven-plugin</artifactId>
-                    <configuration>
-                        <skip>true</skip>
-                    </configuration>
-                </plugin>
+             <plugins>
+                 <plugin>
+                     <groupId>org.apache.felix</groupId>
+                     <artifactId>maven-bundle-plugin</artifactId>
+                     <version>3.2.0</version>
+                     <extensions>true</extensions>
+                     <configuration>
+                         <obrRepository>NONE</obrRepository>
+                         <instructions>
+                             <SCM-Revision>${buildNumber}</SCM-Revision>
+                             <Private-Package>
+                                 org.wso2.carbon.identity.workflow.engine.internal,
+                             </Private-Package>
+                             <Import-Package>
+                                 org.osgi.framework; version="${osgi.framework.import.version.range}",
+                                 org.osgi.service.component; version="${osgi.service.component.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.util; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.bean; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.bean.metadata; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.dto; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.workflow; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.exception; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.dao; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.workflow.mgt.callback; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.role.v2.mgt.core; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.role.v2.mgt.core.exception; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.role.v2.mgt.core.model; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.core.util; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.claim.metadata.mgt; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.claim.metadata.mgt.exception; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.claim.metadata.mgt.model; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.utils.multitenancy; version="${carbon.kernel.package.import.version.range}",
+                                 org.wso2.carbon.context; version="${carbon.kernel.package.import.version.range}",
+                                 org.wso2.carbon.user.core.service; version="${carbon.kernel.package.import.version.range}",
+                                 org.wso2.carbon.user.core.common; version="${carbon.kernel.package.import.version.range}",
+                                 org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
+                                 org.wso2.carbon.database.utils.jdbc; version ="${org.wso2.carbon.database.utils.version.range}",
+                                 org.wso2.carbon.database.utils.jdbc.exceptions; version ="${org.wso2.carbon.database.utils.version.range}",
+                                 org.wso2.carbon.identity.organization.management.service.exception; version="${org.wso2.identity.organization.mgt.import.version.range}",
+                                 org.wso2.carbon.identity.organization.management.organization.user.sharing.util; version="${org.wso2.identity.organization.mgt.import.version.range}",
+                                 org.apache.commons.logging,
+                                 org.apache.commons.lang,
+                                 org.apache.commons.collections
+                             </Import-Package>
+                             <Export-Package>
+                                 !org.wso2.carbon.identity.workflow.engine.internal,
+                                 org.wso2.carbon.identity.workflow.engine.*;
+                             </Export-Package>
+                         </instructions>
+                     </configuration>
+                 </plugin>
+                 <plugin>
+                     <groupId>org.codehaus.mojo</groupId>
+                     <artifactId>findbugs-maven-plugin</artifactId>
+                     <configuration>
+                         <skip>true</skip>
+                     </configuration>
+                 </plugin>
          </plugins>
      </build>
 
