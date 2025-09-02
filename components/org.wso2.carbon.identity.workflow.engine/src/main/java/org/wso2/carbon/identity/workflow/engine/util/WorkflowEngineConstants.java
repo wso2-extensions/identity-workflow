@@ -36,6 +36,8 @@ public class WorkflowEngineConstants {
     public static final String APPROVER_TYPE_USERS = "users";
     public static final String APPROVER_TYPE_ROLES = "roles";
     public static final String REQUEST_ID_COLUMN = "REQUEST_ID";
+    public static final int NO_CURRENT_STEP = -1;
+    public static final String Q_NAME_STEP_SEPARATOR = "-";
 
     /**
      * SQL Query definitions.
@@ -178,7 +180,7 @@ public class WorkflowEngineConstants {
         WORKFLOW_ID_NOT_FOUND("WFE_40002", "The workflow Id is not valid"),
         USER_ERROR_NON_EXISTING_TASK_ID("WFE_40003", "Task does not exist."),
         USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE("WFE_40004", "Unacceptable input provided, " +
-                "Only [CLAIM, RELEASE, APPROVED, REJECTED] are acceptable."),
+                "Allowed values: CLAIM, RELEASE, APPROVED, REJECTED."),
         USER_ERROR_TASK_ALREADY_CLAIMED("WFE_40005", "Task already claimed by another user."),
         USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED("WFE_40006", "Approval task is not assigned to the " +
                 "user."),

@@ -176,7 +176,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                         preparedStatement.setString(2, workflowId);
                     });
             if (stepExists == null) {
-                return -1;
+                return WorkflowEngineConstants.NO_CURRENT_STEP;
             }
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving currentStep from" +
@@ -522,7 +522,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     }
 
     @Override
-    public List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByRequestId(String requestId)
+    public List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByWorkflowRequestId(String requestId)
             throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();

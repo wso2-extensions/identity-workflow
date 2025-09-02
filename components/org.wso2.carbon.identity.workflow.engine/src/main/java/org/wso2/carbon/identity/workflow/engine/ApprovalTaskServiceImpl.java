@@ -237,7 +237,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String approverType;
 
         int currentStep = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
-        if (currentStep == -1) {
+        if (currentStep == WorkflowEngineConstants.NO_CURRENT_STEP) {
             approvalTaskDAO.addApprovalTaskStep(workflowRequestId, workflowId);
             currentStep = 1;
         } else {
@@ -247,7 +247,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         for (Parameter parameter : parameterList) {
             if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
-                String[] stepName = parameter.getqName().split("-");
+                String[] stepName = parameter.getqName().split(WorkflowEngineConstants.Q_NAME_STEP_SEPARATOR);
                 int step = Integer.parseInt(stepName[1]);
                 if (currentStep == step) {
                     approverType = stepName[stepName.length - 1];
@@ -278,13 +278,14 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     }
 
     @Override
-    public void updateApprovalTasksOnWorkflowUpdate(String workflowId, List<Parameter> newWorkflowParams,
-                                                    List<Parameter> oldWorkflowParams) throws WorkflowEngineException {
+    public void updatePendingApprovalTasksOnWorkflowUpdate(String workflowId, List<Parameter> newWorkflowParams,
+                                                           List<Parameter> oldWorkflowParams)
+            throws WorkflowEngineException {
 
         // Get the list of pending requests corresponding to given workflow ID.
-        List<String> requestList = approvalTaskDAO.getPendingRequestsByWorkflowId(workflowId);
+        List<String> pendingRequestList = approvalTaskDAO.getPendingRequestsByWorkflowId(workflowId);
 
-        // APPROVER_NAME list for each step
+        // APPROVER_NAME list for each step.
         Map<Integer, List<String>> newParamValuesForApprovalSteps =
                 Utils.getParamValuesForApprovalSteps(newWorkflowParams);
         // Get the modified steps.
@@ -292,7 +293,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         // For each request, delete the existing approval tasks and
         // add new tasks based on the updated workflow parameters.
-        for (String requestId : requestList) {
+        for (String requestId : pendingRequestList) {
             int currentStep = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(requestId, workflowId);
 
             // Check if the request has been affected by the workflow update.
@@ -304,12 +305,13 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
             // Get the tasks corresponding to the request ID with status READY, BLOCKED or RESERVED.
             List<ApprovalTaskRelationDTO> approvalTaskRelationDTOS =
-                    approvalTaskDAO.getApprovalTaskRelationsByRequestId(requestId);
+                    approvalTaskDAO.getApprovalTaskRelationsByWorkflowRequestId(requestId);
 
             // Get reserved task in the task list if exists.
             ApprovalTaskRelationDTO reservedTask =
                     approvalTaskRelationDTOS.stream()
-                            .filter(dto -> "RESERVED".equals(dto.getTaskStatus()))
+                            .filter(dto -> WorkflowEngineConstants.TaskStatus.RESERVED.toString()
+                                    .equals(dto.getTaskStatus()))
                             .findFirst()
                             .orElse(null);
 
@@ -345,12 +347,13 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 for (String entityId : entityIds) {
                     if (approverNamesForCurrentStep != null && approverNamesForCurrentStep.contains(entityId)) {
                         // Get the tasks respect to the request ID with status 'READY'.
-                        List<ApprovalTaskRelationDTO> approvalTasks =
-                                approvalTaskDAO.getApprovalTaskRelationsByRequestId(requestId);
+                        List<ApprovalTaskRelationDTO> approvalTaskRelationsDTOs =
+                                approvalTaskDAO.getApprovalTaskRelationsByWorkflowRequestId(requestId);
 
                         // Get the task id with the entityId.
-                        String taskId = approvalTasks.stream()
-                                .filter(dto -> entityId.equals(dto.getApproverName()) && "READY".equals(dto
+                        String taskId = approvalTaskRelationsDTOs.stream()
+                                .filter(dto -> entityId.equals(dto.getApproverName())
+                                        && WorkflowEngineConstants.TaskStatus.READY.toString().equals(dto
                                         .getTaskStatus()))
                                 .map(ApprovalTaskRelationDTO::getTaskId)
                                 .findFirst()

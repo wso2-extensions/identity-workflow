@@ -20,29 +20,35 @@ package org.wso2.carbon.identity.workflow.engine.util;
 
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Utility class for workflow-related operations.
  */
 public class Utils {
 
+    /**
+     * Extracts parameter values for approval steps from the given list of parameters.
+     *
+     * @param parameterList List of parameters to extract values from.
+     * @return A map where the key: approval step number, value: a list of parameter values for that step.
+     */
     public static Map<Integer, List<String>> getParamValuesForApprovalSteps(List<Parameter> parameterList) {
 
         // Approval step number as key and list of parameter values as value.
         Map<Integer, List<String>> paramValuesForApprovalSteps = new HashMap<>();
-        String approverName;
-        int step;
         if (parameterList != null) {
             for (Parameter parameter : parameterList) {
                 if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
-                    String[] stepName = parameter.getqName().split("-");
-                    step = Integer.parseInt(stepName[1]);
-                    approverName = parameter.getParamValue();
-                    paramValuesForApprovalSteps.computeIfAbsent(step, k -> new java.util.ArrayList<>())
+                    String[] stepName = parameter.getqName().split(WorkflowEngineConstants.Q_NAME_STEP_SEPARATOR);
+                    int step = Integer.parseInt(stepName[1]);
+                    String approverName = parameter.getParamValue();
+                    paramValuesForApprovalSteps.computeIfAbsent(step, k -> new ArrayList<>())
                             .add(approverName);
                 }
             }
@@ -50,6 +56,13 @@ public class Utils {
         return paramValuesForApprovalSteps;
     }
 
+    /**
+     * Compares two lists of parameters and identifies modified approval steps.
+     *
+     * @param newParams List of new parameters.
+     * @param oldParams List of old parameters.
+     * @return A list of approval step numbers that have been modified.
+     */
     public static List<Integer> getModifiedApprovalSteps(List<Parameter> newParams, List<Parameter> oldParams) {
 
         Map<Integer, List<String>> newParamValuesForApprovalSteps = getParamValuesForApprovalSteps(newParams);
@@ -57,12 +70,13 @@ public class Utils {
         List<Integer> modifiedSteps = new java.util.ArrayList<>();
 
         // Check for modified and new steps.
-        for (Map.Entry<Integer, List<String>> entry : newParamValuesForApprovalSteps.entrySet()) {
-            Integer step = entry.getKey();
-            List<String> newApproverTypes = entry.getValue();
+        for (Map.Entry<Integer, List<String>> approvalStep : newParamValuesForApprovalSteps.entrySet()) {
+            Integer step = approvalStep.getKey();
+            List<String> newApproverTypes = approvalStep.getValue();
             List<String> existingApproverTypes = existingParamValuesForApprovalSteps.get(step);
-            if (existingApproverTypes == null || !new HashSet<>(newApproverTypes).containsAll(existingApproverTypes) ||
-                    !new HashSet<>(existingApproverTypes).containsAll(newApproverTypes)) {
+            Set<String> existingSet = existingApproverTypes == null ? null : new HashSet<>(existingApproverTypes);
+            Set<String> newSet = new HashSet<>(newApproverTypes);
+            if (existingSet == null || !existingSet.equals(newSet)) {
                 modifiedSteps.add(step);
             }
         }

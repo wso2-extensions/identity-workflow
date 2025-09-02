@@ -211,6 +211,6 @@ public interface ApprovalTaskDAO {
      * @return List of ApprovalTaskRelationDTO objects.
      * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task relations.
      */
-    List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByRequestId(String requestId)
+    List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByWorkflowRequestId(String requestId)
             throws WorkflowEngineServerException;
 }
