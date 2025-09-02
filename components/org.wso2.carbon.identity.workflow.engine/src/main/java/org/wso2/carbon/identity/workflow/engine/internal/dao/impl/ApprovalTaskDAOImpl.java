@@ -24,6 +24,7 @@ import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.NamedJdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.util.JdbcUtils;
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskRelationDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
@@ -175,7 +176,7 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                         preparedStatement.setString(2, workflowId);
                     });
             if (stepExists == null) {
-                return 0;
+                return WorkflowEngineConstants.NO_CURRENT_STEP;
             }
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving currentStep from" +
@@ -499,6 +500,46 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+    }
+
+    @Override
+    public List<String> getPendingRequestsByWorkflowId(String workflowId) throws WorkflowEngineServerException {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        try {
+            return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
+                            GET_ALL_UNFINISHED_APPROVAL_EVENTS_BY_WORKFLOW_ID, (resultSet, rowNumber) ->
+                            resultSet.getString(WorkflowEngineConstants.REQUEST_ID_COLUMN),
+                    preparedStatement -> preparedStatement.setString(1, workflowId));
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error occurred while retrieving approval tasks for the " +
+                    "workflow id: %s", workflowId);
+            log.debug(errorMessage, e);
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+    }
+
+    @Override
+    public List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByWorkflowRequestId(String requestId)
+            throws WorkflowEngineServerException {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        try {
+            return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
+                            GET_APPROVAL_TASK_RELATIONS_BY_REQUEST_ID, (resultSet, rowNumber) -> {
+                            ApprovalTaskRelationDTO dto = new ApprovalTaskRelationDTO();
+                        dto.setTaskId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
+                        dto.setTaskStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
+                        dto.setApproverName(resultSet.getString(WorkflowEngineConstants.APPROVER_NAME_COLUMN));
+                        dto.setApproverType(resultSet.getString(WorkflowEngineConstants.APPROVER_TYPE_COLUMN));
+                        return dto;
+                    }, preparedStatement -> preparedStatement.setString(1, requestId));
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error occurred while retrieving approval task relations for the " +
+                    "request id: %s", requestId);
+            log.debug(errorMessage, e);
             throw new WorkflowEngineServerException(errorMessage, e);
         }
     }

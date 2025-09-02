@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.workflow.engine.internal.dao;
 
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskRelationDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
@@ -195,5 +196,21 @@ public interface ApprovalTaskDAO {
      */
     void deletePendingApprovalTasks(String workflowRequestId) throws WorkflowEngineServerException;
 
-}
+    /**
+     * Retrieve the all events/requests corresponding to a workflow ID.
+     *
+     * @param workflowId the workflow ID that need to be checked.
+     * @return approval tasks.
+     */
+    List<String> getPendingRequestsByWorkflowId(String workflowId) throws WorkflowEngineServerException;
 
+    /**
+     * Retrieve the approval task relations corresponding to a workflow request ID.
+     *
+     * @param requestId the workflow request ID that need to be checked.
+     * @return List of ApprovalTaskRelationDTO objects.
+     * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task relations.
+     */
+    List<ApprovalTaskRelationDTO> getApprovalTaskRelationsByWorkflowRequestId(String requestId)
+            throws WorkflowEngineServerException;
+}

@@ -35,6 +35,9 @@ public class WorkflowEngineConstants {
     public static final String RELATIONSHIP_ID_IN_REQUEST_COLUMN = "RELATIONSHIP_ID";
     public static final String APPROVER_TYPE_USERS = "users";
     public static final String APPROVER_TYPE_ROLES = "roles";
+    public static final String REQUEST_ID_COLUMN = "REQUEST_ID";
+    public static final int NO_CURRENT_STEP = -1;
+    public static final String Q_NAME_STEP_SEPARATOR = "-";
 
     /**
      * SQL Query definitions.
@@ -91,6 +94,10 @@ public class WorkflowEngineConstants {
         public static final String GET_CREATED_TIME_IN_MILL = "SELECT CREATED_AT FROM WF_REQUEST WHERE UUID= ?";
         public static final String GET_REQUEST_ID_OF_RELATIONSHIP = "SELECT RELATIONSHIP_ID FROM " +
                 "WF_WORKFLOW_REQUEST_RELATION WHERE REQUEST_ID = ?";
+        public static final String GET_ALL_UNFINISHED_APPROVAL_EVENTS_BY_WORKFLOW_ID = "SELECT REQUEST_ID FROM " +
+                "WF_WORKFLOW_REQUEST_RELATION WHERE WORKFLOW_ID = ? AND STATUS = 'PENDING'";
+        public static final String GET_APPROVAL_TASK_RELATIONS_BY_REQUEST_ID = "SELECT TASK_ID, APPROVER_NAME, " +
+                "TASK_STATUS, APPROVER_TYPE FROM WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ?";
     }
 
     /**
@@ -166,30 +173,40 @@ public class WorkflowEngineConstants {
      */
     public enum ErrorMessages {
 
-        TASK_NOT_FOUND("SWE_00001", "Invalid event ID"),
-        WORKFLOW_ID_NOT_FOUND("SWE_00003", "The workflow Id is not valid"),
-        ERROR_OCCURRED_WHILE_RETRIEVING_WORKFLOW_REQUEST("SWE_00004",
+        /*
+         Error messages for client errors - 400 series
+         */
+        TASK_NOT_FOUND("WFE_40001", "Invalid event ID"),
+        WORKFLOW_ID_NOT_FOUND("WFE_40002", "The workflow Id is not valid"),
+        USER_ERROR_NON_EXISTING_TASK_ID("WFE_40003", "Task does not exist."),
+        USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE("WFE_40004", "Unacceptable input provided, " +
+                "Allowed values: CLAIM, RELEASE, APPROVED, REJECTED."),
+        USER_ERROR_TASK_ALREADY_CLAIMED("WFE_40005", "Task already claimed by another user."),
+        USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED("WFE_40006", "Approval task is not assigned to the " +
+                "user."),
+        USER_ERROR_TASK_ALREADY_COMPLETED("WFE_40007", "Task is already completed."),
+
+        /*
+         Error messages for server errors - 500 series
+         */
+        ERROR_OCCURRED_WHILE_RETRIEVING_WORKFLOW_REQUEST("WFE_50001",
                 "Cannot get the workflow request given the request Id"),
-        ERROR_OCCURRED_WHILE_RETRIEVING_PARAMETER_LIST("SWE_00005",
+        ERROR_OCCURRED_WHILE_RETRIEVING_PARAMETER_LIST("WFE_50002",
                 "The parameterList can't get given the associated workflowId"),
-        ERROR_OCCURRED_WHILE_CHANGING_APPROVALS_STATE("SWE_00006", "Unable to update the " +
+        ERROR_OCCURRED_WHILE_CHANGING_APPROVALS_STATE("WFE_50003", "Unable to update the " +
                 "approval status, " +
                 "Server encountered an error while updating the approval task status."),
-        ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_OF_USER("SWE_00007", "Unable to retrieve the " +
+        ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_OF_USER("WFE_50004", "Unable to retrieve the " +
                 "user approval, " +
                 "Server encountered an error while retrieving information on the approval task."),
-        ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER("SWE_00008", "Unable to retrieve " +
+        ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER("WFE_50005", "Unable to retrieve " +
                 "approvals for the user, " +
                 "Server encountered an error while retrieving approvals for user."),
-        ERROR_RETRIEVING_ASSOCIATED_USER_ID("SWE_00009", "Unable to retrieve the user ID. " +
+        ERROR_RETRIEVING_ASSOCIATED_USER_ID("WFE_50006", "Unable to retrieve the user ID. " +
                 "Server encountered an error while retrieving the user ID associated with the task."),
-        USER_ERROR_NON_EXISTING_TASK_ID("SWE_10001", "Task does not exist."),
-        USER_ERROR_NOT_ACCEPTABLE_INPUT_FOR_NEXT_STATE("10005", "Unacceptable input provided, " +
-                "Only [CLAIM, RELEASE, APPROVED, REJECTED] are acceptable."),
-        USER_ERROR_TASK_ALREADY_CLAIMED("SWE_10002", "Task already claimed by another user."),
-        USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED("SWE_10003", "Approval task is not assigned to the " +
-                "user."),
-        USER_ERROR_TASK_ALREADY_COMPLETED("SWE_10004", "Task is already completed.");
+
+        ERROR_OCCURRED_WHILE_UPDATING_WORKFLOW_REQUEST("WFE_50007", "Server encountered an error while " +
+                "updating the workflow request.");
 
         private final String code;
         private final String description;

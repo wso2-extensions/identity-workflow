@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskRelationDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.PropertyDTO;
@@ -47,6 +48,7 @@ import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowRequestDAO;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.ApprovalTaskDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.WorkflowRequestDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.model.TaskModel;
+import org.wso2.carbon.identity.workflow.engine.util.Utils;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 import org.wso2.carbon.identity.workflow.mgt.bean.RequestParameter;
@@ -235,7 +237,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String approverType;
 
         int currentStep = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
-        if (currentStep == 0) {
+        if (currentStep == WorkflowEngineConstants.NO_CURRENT_STEP) {
             approvalTaskDAO.addApprovalTaskStep(workflowRequestId, workflowId);
             currentStep = 1;
         } else {
@@ -245,7 +247,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         for (Parameter parameter : parameterList) {
             if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
-                String[] stepName = parameter.getqName().split("-");
+                String[] stepName = parameter.getqName().split(WorkflowEngineConstants.Q_NAME_STEP_SEPARATOR);
                 int step = Integer.parseInt(stepName[1]);
                 if (currentStep == step) {
                     approverType = stepName[stepName.length - 1];
@@ -273,6 +275,99 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                     WorkflowEngineConstants.ErrorMessages.WORKFLOW_ID_NOT_FOUND.getCode());
         }
         approvalTaskDAO.deletePendingApprovalTasks(workflowId);
+    }
+
+    @Override
+    public void updatePendingApprovalTasksOnWorkflowUpdate(String workflowId, List<Parameter> newWorkflowParams,
+                                                           List<Parameter> oldWorkflowParams)
+            throws WorkflowEngineException {
+
+        // Get the list of pending requests corresponding to given workflow ID.
+        List<String> pendingRequestList = approvalTaskDAO.getPendingRequestsByWorkflowId(workflowId);
+
+        // APPROVER_NAME list for each step.
+        Map<Integer, List<String>> newParamValuesForApprovalSteps =
+                Utils.getParamValuesForApprovalSteps(newWorkflowParams);
+        // Get the modified steps.
+        List<Integer> modifiedSteps = Utils.getModifiedApprovalSteps(newWorkflowParams, oldWorkflowParams);
+
+        // For each request, delete the existing approval tasks and
+        // add new tasks based on the updated workflow parameters.
+        for (String requestId : pendingRequestList) {
+            int currentStep = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(requestId, workflowId);
+
+            // Check if the request has been affected by the workflow update.
+            // First check if the current step is one of the modified steps.
+            if (!modifiedSteps.contains(currentStep)) {
+                // If not, no need to change the approval tasks for this request.
+                continue;
+            }
+
+            // Get the tasks corresponding to the request ID with status READY, BLOCKED or RESERVED.
+            List<ApprovalTaskRelationDTO> approvalTaskRelationDTOS =
+                    approvalTaskDAO.getApprovalTaskRelationsByWorkflowRequestId(requestId);
+
+            // Get reserved task in the task list if exists.
+            ApprovalTaskRelationDTO reservedTask =
+                    approvalTaskRelationDTOS.stream()
+                            .filter(dto -> WorkflowEngineConstants.TaskStatus.RESERVED.toString()
+                                    .equals(dto.getTaskStatus()))
+                            .findFirst()
+                            .orElse(null);
+
+            // Delete existing pending approval tasks.
+            approvalTaskDAO.deletePendingApprovalTasks(requestId);
+            // Update the current step to (step-1) to reset the pending step.
+            approvalTaskDAO.updateStateOfRequest(requestId, workflowId, currentStep - 1);
+            // Get corresponding workflow request.
+            WorkflowRequest request = getWorkflowRequest(requestId);
+            // Add new approval tasks based on updated workflow parameters.
+            addApprovalTasksForWorkflowRequest(request, newWorkflowParams);
+
+            if (reservedTask != null) {
+                /*
+                If there is a RESERVED task, need to re-perform the reservation for the same user.
+                The reservation is made successfully for the request if the user is valid for the new workflow as well.
+                 */
+                String userId = reservedTask.getApproverName();
+
+                // Get the new workflow APPROVER_NAME list for the current step.
+                List<String> approverNamesForCurrentStep =
+                        newParamValuesForApprovalSteps.get(currentStep);
+
+                // Retrieving the tenant domain of the user corresponding to the userId to validate reserved task users.
+                String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                // Get the user's roles.
+                List<String> entityIds = getAssignedRoleIds(userId, tenantDomain);
+                // Add userId as eligible entity if the workflow has USER.
+                entityIds.add(userId);
+
+                // Check if the user is still eligible to approve the request,
+                // by checking if any entityId is present in the approverNamesForCurrentStep.
+                for (String entityId : entityIds) {
+                    if (approverNamesForCurrentStep != null && approverNamesForCurrentStep.contains(entityId)) {
+                        // Get the tasks respect to the request ID with status 'READY'.
+                        List<ApprovalTaskRelationDTO> approvalTaskRelationsDTOs =
+                                approvalTaskDAO.getApprovalTaskRelationsByWorkflowRequestId(requestId);
+
+                        // Get the task id with the entityId.
+                        String taskId = approvalTaskRelationsDTOs.stream()
+                                .filter(dto -> entityId.equals(dto.getApproverName())
+                                        && WorkflowEngineConstants.TaskStatus.READY.toString().equals(dto
+                                        .getTaskStatus()))
+                                .map(ApprovalTaskRelationDTO::getTaskId)
+                                .findFirst()
+                                .orElse(null);
+
+                        // If a task is found, perform reservation.
+                        if (taskId != null) {
+                            handleClaim(taskId);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     /**
