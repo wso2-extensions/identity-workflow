@@ -175,9 +175,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         taskId = taskId.trim();
         String requestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(taskId);
         if (StringUtils.isEmpty(requestId)) {
-            throw new WorkflowEngineClientException(
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_NON_EXISTING_TASK_ID.getDescription(),
-                    WorkflowEngineConstants.ErrorMessages.USER_ERROR_NON_EXISTING_TASK_ID.getCode());
+            return null;
         }
         WorkflowRequest request = getWorkflowRequest(requestId);
         String initiator = workflowRequestDAO.getInitiatedUser(requestId);
