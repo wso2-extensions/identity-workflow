@@ -52,12 +52,23 @@ public interface ApprovalTaskDAO {
     ApproverDTO getApproverDetailForApprovalTask(String approvalTaskId) throws WorkflowEngineServerException;
 
     /**
+     * Delete all the approval tasks except the given approval task ID for workflow requests related to a given
+     * workflow.
+     *
+     * @param workflowRequestId The workflow request ID that need to be checked.
+     * @param workflowId The workflow ID that need to be checked.
+     * @param approvalTaskId The approval task ID that need to be excluded when deleting.
+     */
+    void deleteApprovalTasksExceptGivenTaskId(String workflowRequestId, String workflowId,
+                                              String approvalTaskId) throws WorkflowEngineServerException;
+
+    /**
      * Delete all the approval tasks except the given approval task ID.
      *
      * @param workflowRequestId The workflow request ID that need to be checked.
      * @param approvalTaskId The approval task ID that need to be excluded when deleting.
      */
-    void deleteApprovalTasksOfWorkflowRequestExceptGivenId(String workflowRequestId, String approvalTaskId)
+    void deleteApprovalTasksExceptGivenTaskId(String workflowRequestId, String approvalTaskId)
             throws WorkflowEngineServerException;
 
     /**
@@ -176,9 +187,11 @@ public interface ApprovalTaskDAO {
      * Retrieve the approval tasks corresponding to a workflow request ID.
      *
      * @param workflowRequestId the workflow request ID that need to be checked.
+     * @param workflowId the workflow ID that need to be checked.
      * @return approval tasks.
      */
-    List<String> getApprovalTasksByWorkflowRequestId(String workflowRequestId) throws WorkflowEngineServerException;
+    List<String> getApprovalTasksByWorkflowRequestId(String workflowRequestId, String workflowId)
+            throws WorkflowEngineServerException;
 
     /**
      * Retrieve the workflow ID giving task ID.

@@ -103,16 +103,36 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     }
 
     @Override
-    public void deleteApprovalTasksOfWorkflowRequestExceptGivenId(String eventId, String approvalTaskId)
+    public void deleteApprovalTasksExceptGivenTaskId(String eventId, String workflowId, String approvalTaskId)
             throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
-            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries.DELETE_APPROVAL_TASK_BY_TASK_ID,
+            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries
+                            .DELETE_APPROVAL_TASKS_OF_GIVEN_WORKFLOW_REQUEST_EXCLUDING_UPDATED_TASK_ID,
+                    preparedStatement -> {
+                        preparedStatement.setString(1, eventId);
+                        preparedStatement.setString(2, workflowId);
+                        preparedStatement.setString(3, approvalTaskId);
+                    });
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error while deleting the approval tasks while excluding the " +
+                    "approval task: %s", approvalTaskId);
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
+    }
+
+    @Override
+    public void deleteApprovalTasksExceptGivenTaskId(String eventId, String approvalTaskId)
+            throws WorkflowEngineServerException {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        try {
+            jdbcTemplate.executeUpdate(WorkflowEngineConstants.SqlQueries
+                            .DELETE_APPROVAL_TASKS_EXCLUDING_UPDATED_TASK_ID,
                     preparedStatement -> {
                         preparedStatement.setString(1, eventId);
                         preparedStatement.setString(2, approvalTaskId);
-
                     });
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error while deleting the approval tasks while excluding the " +
@@ -304,7 +324,8 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                         ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
                         approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
                         approvalTaskSummaryDTO.setRequestId(resultSet.getString(WorkflowEngineConstants.EVENT_ID));
-                        approvalTaskSummaryDTO
+                        approvalTaskSummaryDTO.setWorkflowId(resultSet.getString(WorkflowEngineConstants.WORKFLOW_ID));
+                approvalTaskSummaryDTO
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
                     }, namedPreparedStatement -> {
@@ -351,7 +372,8 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
                         ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
                         approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
                         approvalTaskSummaryDTO.setRequestId(resultSet.getString(WorkflowEngineConstants.EVENT_ID));
-                        approvalTaskSummaryDTO
+                        approvalTaskSummaryDTO.setWorkflowId(resultSet.getString(WorkflowEngineConstants.WORKFLOW_ID));
+                approvalTaskSummaryDTO
                                 .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
                         return approvalTaskSummaryDTO;
                     }, namedPreparedStatement -> {
@@ -442,18 +464,20 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
     }
 
     @Override
-    public List<String> getApprovalTasksByWorkflowRequestId(String workflowRequestId)
+    public List<String> getApprovalTasksByWorkflowRequestId(String workflowRequestId, String workflowId)
             throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
-            return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_TASK_ID_FROM_REQUEST, (resultSet, rowNumber) ->
-                            resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN),
-                    preparedStatement -> preparedStatement.setString(1, workflowRequestId));
+            return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.GET_TASK_ID_FROM_REQUEST,
+                    (resultSet, rowNumber) -> resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN),
+                    preparedStatement -> {
+                        preparedStatement.setString(1, workflowRequestId);
+                        preparedStatement.setString(2, workflowId);
+                    });
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving approval tasks for the " +
-                    "workflow request id: %s", workflowRequestId);
+                    "workflow request id: %s and workflow id: %s", workflowRequestId, workflowId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }

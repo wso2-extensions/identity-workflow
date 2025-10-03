@@ -35,6 +35,8 @@ public class ApprovalTaskSummaryDTO {
 
     private String requestId = null;
 
+    private String workflowId = null;
+
     private String approvalStatus = null;
 
     private String priority = null;
@@ -179,6 +181,16 @@ public class ApprovalTaskSummaryDTO {
         this.requestId = requestId;
     }
 
+    public String getWorkflowId() {
+
+        return workflowId;
+    }
+
+    public void setWorkflowId(String workflowId) {
+
+        this.workflowId = workflowId;
+    }
+
     @Override
     public String toString() {
 
@@ -192,6 +204,8 @@ public class ApprovalTaskSummaryDTO {
         sb.append("  approvalStatus: ").append(approvalStatus).append("\n");
         sb.append("  priority: ").append(priority).append("\n");
         sb.append("  createdTimeInMillis: ").append(createdTimeInMillis).append("\n");
+        sb.append("  requestId: ").append(requestId).append("\n");
+        sb.append("  workflowId: ").append(workflowId).append("\n");
         sb.append("}\n");
         return sb.toString();
     }
