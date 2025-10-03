@@ -159,7 +159,7 @@ public class ApprovalTaskAuditLogger {
      */
     public enum Operation {
 
-        CLAIM("claim-approval"),
+        RESERVE("reserve-approval"),
         RELEASE("release-approval"),
         APPROVE("approve-approval"),
         REJECT("reject-approval"),
