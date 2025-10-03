@@ -147,7 +147,7 @@ public class ApprovalTaskAuditLoggerTest {
         ApprovalTaskAuditLogger.Operation[] operations = {
             ApprovalTaskAuditLogger.Operation.APPROVE,
             ApprovalTaskAuditLogger.Operation.REJECT,
-            ApprovalTaskAuditLogger.Operation.CLAIM,
+            ApprovalTaskAuditLogger.Operation.RESERVE,
             ApprovalTaskAuditLogger.Operation.RELEASE,
             ApprovalTaskAuditLogger.Operation.COMPLETE
         };
@@ -169,7 +169,7 @@ public class ApprovalTaskAuditLoggerTest {
 
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.APPROVE.getLogAction(), "approve-approval");
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.REJECT.getLogAction(), "reject-approval");
-        Assert.assertEquals(ApprovalTaskAuditLogger.Operation.CLAIM.getLogAction(), "claim-approval");
+        Assert.assertEquals(ApprovalTaskAuditLogger.Operation.RESERVE.getLogAction(), "claim-approval");
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.RELEASE.getLogAction(), "release-approval");
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.COMPLETE.getLogAction(), "complete-approval");
     }
@@ -234,7 +234,7 @@ public class ApprovalTaskAuditLoggerTest {
     public void testBuilderWithMinimalRequiredFields() {
         // Setup - only operation and taskId (required fields)
         ApprovalTaskAuditLogger.AuditLogBuilder builder = auditLogger.auditBuilder()
-                .operation(ApprovalTaskAuditLogger.Operation.CLAIM)
+                .operation(ApprovalTaskAuditLogger.Operation.RESERVE)
                 .taskId("minimal-task");
 
         Map<String, Object> dataMap = builder.buildDataMap();
