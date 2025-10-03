@@ -23,13 +23,10 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.context.CarbonContext;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
@@ -69,7 +66,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -117,7 +113,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             offset = OFFSET;
         }
 
-        String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
+        String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
 
         List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasks(statusList, userId, limit, offset);
         // Filter the reserved workflow requests to filter out the BLOCKED tasks corresponding to the same request.
@@ -396,22 +392,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     private List<String> getAssignedRoleIds(String userId, String tenantDomain) throws WorkflowEngineException {
 
-
-        String orgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
-        String userResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getUserResidentOrganizationId();
-        if (!StringUtils.equals(orgId, userResidentOrgId)) {
-            try {
-                Optional<String> optionalUserId = OrganizationSharedUserUtil
-                        .getUserIdOfAssociatedUserByOrgId(userId, orgId);
-                if (optionalUserId.isPresent()) {
-                    userId = optionalUserId.get();
-                }
-            } catch (OrganizationManagementException e) {
-                throw new WorkflowEngineException(
-                        WorkflowEngineConstants.ErrorMessages.ERROR_RETRIEVING_ASSOCIATED_USER_ID.getDescription(), e);
-            }
-        }
         try {
             List<String> roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().
                     getRoleIdListOfUser(userId, tenantDomain);
@@ -440,7 +420,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     private void validateApprovers(String taskId) throws WorkflowEngineException {
 
-        String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
+        String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
         boolean isAssignedApprovalTask = false;
@@ -554,7 +534,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     private void handleClaim(String updatedApprovalTaskId) throws WorkflowEngineException {
 
-        String userId = CarbonContext.getThreadLocalCarbonContext().getUserId();
+        String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
         String reservedStatus = WorkflowEngineConstants.TaskStatus.RESERVED.toString();
         String blockedStatus = WorkflowEngineConstants.TaskStatus.BLOCKED.toString();
 
@@ -754,7 +734,12 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         /* Update the entity of the approval task to the current user.
            This is to ensure that the task is marked as completed by the user who approved it
            and to maintain the integrity of the task history. */
-        approvalTaskDAO.updateApprovalTaskEntityDetail(approvalTaskId, ENTITY_TYPE_USERS,
-                CarbonContext.getThreadLocalCarbonContext().getUserId());
+        try {
+            String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
+            approvalTaskDAO.updateApprovalTaskEntityDetail(approvalTaskId, ENTITY_TYPE_USERS, userId);
+        } catch (WorkflowEngineException e) {
+            throw new WorkflowEngineServerException(
+                    WorkflowEngineConstants.ErrorMessages.ERROR_RETRIEVING_ASSOCIATED_USER_ID.getDescription(), e);
+        }
     }
 }

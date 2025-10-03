@@ -18,6 +18,11 @@
 
 package org.wso2.carbon.identity.workflow.engine.util;
 
+import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineException;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
 
 import java.util.ArrayList;
@@ -25,6 +30,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -88,5 +94,33 @@ public class Utils {
             }
         }
         return modifiedSteps;
+    }
+
+    /**
+     * Resolves the user ID based on the organization context.
+     *
+     * @param userId The original user ID.
+     * @return The resolved user ID.
+     * @throws WorkflowEngineException If there is an error during the resolution process.
+     */
+    public static String resolveUserID(String userId) throws WorkflowEngineException {
+
+        String orgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+        String userResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getUserResidentOrganizationId();
+        if (!StringUtils.equals(orgId, userResidentOrgId)) {
+            try {
+                Optional<String> optionalUserId = OrganizationSharedUserUtil
+                        .getUserIdOfAssociatedUserByOrgId(userId, orgId);
+                if (optionalUserId.isPresent()) {
+                    userId = optionalUserId.get();
+                }
+            } catch (OrganizationManagementException e) {
+                throw new WorkflowEngineException(
+                        WorkflowEngineConstants.ErrorMessages.ERROR_RETRIEVING_ASSOCIATED_USER_ID.getDescription(), e);
+            }
+        }
+
+        return userId;
     }
 }
