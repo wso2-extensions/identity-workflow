@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowRequestDAO;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.ApprovalTaskDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.impl.WorkflowRequestDAOImpl;
 import org.wso2.carbon.identity.workflow.engine.model.TaskModel;
+import org.wso2.carbon.identity.workflow.engine.util.ApprovalTaskAuditLogger;
 import org.wso2.carbon.identity.workflow.engine.util.Utils;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
@@ -91,6 +92,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private final WSWorkflowCallBackService wsWorkflowCallBackService = new WSWorkflowCallBackService();
     private final ClaimMetadataManagementServiceImpl claimMetadataManagementService =
             new ClaimMetadataManagementServiceImpl();
+    private final ApprovalTaskAuditLogger auditLogger = new ApprovalTaskAuditLogger();
 
     private static final String ROLE_ID_PARAM_NAME = "Role ID";
     private static final String ROLE_NAME_PARAM_NAME = "Role Name";
@@ -488,6 +490,17 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         handleApprovalTaskCompletion(approvalTaskId, workflowRequestId, ApprovalTaskServiceImpl.APPROVED);
 
         int stepValue = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
+
+        // Audit log for approval action.
+        ApprovalTaskAuditLogger.AuditLogBuilder auditBuilder = auditLogger.auditBuilder()
+                .operation(ApprovalTaskAuditLogger.Operation.APPROVE)
+                .taskId(approvalTaskId)
+                .workflowRequestId(workflowRequestId)
+                .workflowId(workflowId)
+                .newStatus(WorkflowEngineConstants.TaskStatus.APPROVED.toString())
+                .stepValue(stepValue);
+        auditLogger.printAuditLog(auditBuilder);
+
         List<Parameter> approvalWorkflowParameterList = getApprovalWorkflowParameters(workflowId);
 
         /* If the current step value is less than the total number of approval steps defined in the workflow
@@ -516,6 +529,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         String workflowRequestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
         handleApprovalTaskCompletion(approvalTaskId, workflowRequestId, ApprovalTaskServiceImpl.REJECTED);
+
+        // Audit log for rejection action.
+        ApprovalTaskAuditLogger.AuditLogBuilder auditBuilder = auditLogger.auditBuilder()
+                .operation(ApprovalTaskAuditLogger.Operation.REJECT)
+                .taskId(approvalTaskId)
+                .workflowRequestId(workflowRequestId)
+                .newStatus(WorkflowEngineConstants.TaskStatus.REJECTED.toString());
+        auditLogger.printAuditLog(auditBuilder);
+
         completeWorkflowRequest(workflowRequestId, REJECTED);
     }
 
@@ -556,14 +578,44 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             if (existingApprovalTaskId.equals(updatedApprovalTaskId)) {
                 if (WorkflowEngineConstants.APPROVER_TYPE_USERS.equals(approverType)) {
                     approvalTaskDAO.updateApprovalTaskStatus(updatedApprovalTaskId, reservedStatus);
+
+                    // Audit log for reserve action.
+                    ApprovalTaskAuditLogger.AuditLogBuilder auditBuilder = auditLogger.auditBuilder()
+                            .operation(ApprovalTaskAuditLogger.Operation.RESERVE)
+                            .taskId(updatedApprovalTaskId)
+                            .approverId(userId)
+                            .workflowRequestId(workflowRequestID)
+                            .workflowId(workflowId)
+                            .newStatus(reservedStatus);
+                    auditLogger.printAuditLog(auditBuilder);
                 } else if (WorkflowEngineConstants.APPROVER_TYPE_ROLES.equals(approverType)) {
                     // Create a new task for the user who claimed the task.
                     String newTaskId = UUID.randomUUID().toString();
                     approvalTaskDAO.addApproversOfRequest(newTaskId, workflowRequestID, workflowId,
                             ENTITY_TYPE_CLAIMED_USERS, userId, reservedStatus);
+                    // Audit log for reserve action.
+                    ApprovalTaskAuditLogger.AuditLogBuilder auditBuilder = auditLogger.auditBuilder()
+                            .operation(ApprovalTaskAuditLogger.Operation.RESERVE)
+                            .taskId(newTaskId)
+                            .approverId(userId)
+                            .approverType(ENTITY_TYPE_CLAIMED_USERS)
+                            .workflowRequestId(workflowRequestID)
+                            .workflowId(workflowId)
+                            .newStatus(reservedStatus);
+                    auditLogger.printAuditLog(auditBuilder);
 
                     // Update the status of the existing task to BLOCKED.
                     approvalTaskDAO.updateApprovalTaskStatus(updatedApprovalTaskId, blockedStatus);
+
+                    // Audit log for reserve action.
+                    ApprovalTaskAuditLogger.AuditLogBuilder blockedApprovalBuilder = auditLogger.auditBuilder()
+                            .operation(ApprovalTaskAuditLogger.Operation.RESERVE)
+                            .taskId(newTaskId)
+                            .approverId(userId)
+                            .workflowRequestId(workflowRequestID)
+                            .workflowId(workflowId)
+                            .newStatus(blockedStatus);
+                    auditLogger.printAuditLog(blockedApprovalBuilder);
                 }
             } else {
                 // Update the status of all existing tasks to BLOCKED.
