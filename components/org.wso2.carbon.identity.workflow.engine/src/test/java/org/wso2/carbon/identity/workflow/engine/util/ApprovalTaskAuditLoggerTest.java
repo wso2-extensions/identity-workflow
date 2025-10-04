@@ -22,6 +22,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -169,7 +170,7 @@ public class ApprovalTaskAuditLoggerTest {
 
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.APPROVE.getLogAction(), "approve-approval");
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.REJECT.getLogAction(), "reject-approval");
-        Assert.assertEquals(ApprovalTaskAuditLogger.Operation.RESERVE.getLogAction(), "claim-approval");
+        Assert.assertEquals(ApprovalTaskAuditLogger.Operation.RESERVE.getLogAction(), "reserve-approval");
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.RELEASE.getLogAction(), "release-approval");
         Assert.assertEquals(ApprovalTaskAuditLogger.Operation.COMPLETE.getLogAction(), "complete-approval");
     }
@@ -177,7 +178,7 @@ public class ApprovalTaskAuditLoggerTest {
     @Test
     public void testTriggerAuditLogWithNullOperation() {
 
-        auditLogger.triggerAuditLog(null, "task-123", Map.of("key", "value"));
+        auditLogger.triggerAuditLog(null, "task-123", Collections.singletonMap("key", "value"));
         Assert.assertTrue(true, "Method should handle null operation gracefully");
     }
 
@@ -185,7 +186,7 @@ public class ApprovalTaskAuditLoggerTest {
     public void testTriggerAuditLogWithBlankTargetId() {
 
         auditLogger.triggerAuditLog(ApprovalTaskAuditLogger.Operation.APPROVE, "  ",
-                Map.of("key", "value"));
+                Collections.singletonMap("key", "value"));
         Assert.assertTrue(true, "Method should handle blank target ID gracefully");
     }
 
