@@ -21,7 +21,7 @@
     <parent>
         <artifactId>identity-workflow</artifactId>
         <groupId>org.wso2.carbon.identity.workflow</groupId>
-         <version>1.0.22-SNAPSHOT</version>
+         <version>1.0.22</version>
          <relativePath>../../pom.xml</relativePath>
      </parent>
      <artifactId>org.wso2.carbon.identity.workflow.engine</artifactId>
