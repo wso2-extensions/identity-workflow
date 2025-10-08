@@ -94,6 +94,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             new ClaimMetadataManagementServiceImpl();
     private final ApprovalTaskAuditLogger auditLogger = new ApprovalTaskAuditLogger();
 
+    private static final String CLAIMS_PARAM_NAME = "Claims";
     private static final String ROLE_ID_PARAM_NAME = "Role ID";
     private static final String ROLE_NAME_PARAM_NAME = "Role Name";
     private static final String USERS_TO_BE_ADDED_PARAM_NAME = "Users to be Added";
@@ -722,7 +723,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                             propertyDTO.setValue(claimValue);
                             workflowRequestProperties.add(propertyDTO);
                         }
-
+                        // The claims are already added. No need to add the full claim list as another parameter again.
+                        continue;
                     }
                 } else if (TENANT_DOMAIN_PARAM_NAME.equals(paramString)) {
                     // Skip these parameters as they are not required in the task parameters.
