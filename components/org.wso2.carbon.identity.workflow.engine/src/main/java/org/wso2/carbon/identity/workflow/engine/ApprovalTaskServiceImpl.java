@@ -272,7 +272,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @return The claim value.
      * @throws WorkflowEngineServerException If claim retrieval fails.
      */
-    private static String getUserClaimValueByUsername(int tenantId, String username, String claimUri)
+    private String getUserClaimValueByUsername(int tenantId, String username, String claimUri)
             throws WorkflowEngineServerException {
 
         try {
@@ -366,7 +366,16 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
                             // Collect approvers for notification after all parameters are processed.
                             if (APPROVER_TYPE_ROLES.equalsIgnoreCase(approverType)) {
-                                approversToNotify.addAll(getAssignedUserIds(approverIdentifier, tenantDomain));
+                                List<String> assignedUserIds = getAssignedUserIds(approverIdentifier, tenantDomain);
+                                if (CollectionUtils.isEmpty(assignedUserIds)) {
+                                    if (log.isDebugEnabled()) {
+                                        log.debug("Role approver '{}' in tenant '{}' has no assigned users. " +
+                                                        "No notifications will be sent for this role.",
+                                                approverIdentifier, tenantDomain);
+                                    }
+                                } else {
+                                    approversToNotify.addAll(assignedUserIds);
+                                }
                             } else {
                                 approversToNotify.add(approverIdentifier);
                             }
