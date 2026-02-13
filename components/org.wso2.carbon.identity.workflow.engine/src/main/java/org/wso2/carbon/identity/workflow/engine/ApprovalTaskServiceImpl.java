@@ -23,13 +23,21 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.event.IdentityEventConstants;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.governance.IdentityGovernanceUtil;
+import org.wso2.carbon.identity.governance.service.notification.NotificationChannels;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskRelationDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
@@ -61,6 +69,7 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -104,6 +113,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private static final String AUDIENCE_ID_PARAM_NAME = "Audience ID";
     private static final String COMMA_SEPARATOR = ",";
     private static final String ROLE_NOT_FOUND_ERROR_CODE = "RMA-60007";
+    public static final String Q_NAME_INITIATOR_CHANNELS_PREFIX = "NotificationForInitiator-channels";
+    private static final String CHANNEL_SMS = "sms";
+    private static final String CLAIM_MOBILE = "http://wso2.org/claims/mobile";
+    private static final String PARAM_NOTIFICATION = "Notification";
+    private static final String Q_NAME_APPROVER_CHANNELS_PREFIX = "NotificationForApprovers-channels";
+    private static final String APPROVER_TYPE_ROLES = "roles";
+    private static final String NOTIFICATION_EVENT_NAME_PREFIX = "TRIGGER_";
+    private static final String NOTIFICATION_EVENT_NAME_SUFFIX = "_NOTIFICATION";
+    private static final String NOTIFICATION_EVENT_NAME_SUFFIX_LOCAL = "_LOCAL";
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
@@ -224,6 +242,76 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
+    /**
+     * Retrieves user claim value by user ID.
+     *
+     * @param tenantId The tenant ID.
+     * @param userId   The user ID.
+     * @param claimUri The claim URI.
+     * @return The claim value.
+     * @throws WorkflowEngineServerException If claim retrieval fails.
+     */
+    private static String getUserClaimValue(int tenantId, String userId, String claimUri)
+            throws WorkflowEngineServerException {
+
+        try {
+            AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) WorkflowEngineServiceDataHolder
+                    .getInstance().getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
+            return userStoreManager.getUserClaimValueWithID(userId, claimUri, null);
+        } catch (UserStoreException e) {
+            throw new WorkflowEngineServerException("Error while retrieving user claim: " + claimUri, e);
+        }
+    }
+
+    /**
+     * Retrieves user claim value by username.
+     *
+     * @param tenantId The tenant ID.
+     * @param username The username.
+     * @param claimUri The claim URI.
+     * @return The claim value.
+     * @throws WorkflowEngineServerException If claim retrieval fails.
+     */
+    private static String getUserClaimValueByUsername(int tenantId, String username, String claimUri)
+            throws WorkflowEngineServerException {
+
+        try {
+            AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) WorkflowEngineServiceDataHolder
+                    .getInstance().getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
+            return userStoreManager.getUserClaimValue(username, claimUri, null);
+        } catch (UserStoreException e) {
+            throw new WorkflowEngineServerException("Error while retrieving user claim: " + claimUri, e);
+        }
+    }
+
+    /**
+     * Resolve event name according to the notification channel.
+     *
+     * @param notificationChannel Notification channel
+     * @return Resolved event name
+     */
+    public static String resolveEventName(String notificationChannel) {
+
+        if (NotificationChannels.SMS_CHANNEL.getChannelType().equalsIgnoreCase(notificationChannel)) {
+            return NOTIFICATION_EVENT_NAME_PREFIX + NotificationChannels.SMS_CHANNEL.getChannelType() +
+                    NOTIFICATION_EVENT_NAME_SUFFIX + NOTIFICATION_EVENT_NAME_SUFFIX_LOCAL;
+        } else {
+            return IdentityEventConstants.Event.TRIGGER_NOTIFICATION;
+        }
+    }
+
+    private static WorkflowRequest buildWorkflowRequest(String workflowRequestId) {
+
+        WorkflowRequest workflowRequest = new WorkflowRequest();
+        RequestParameter requestParameter = new RequestParameter();
+        requestParameter.setName(WorkflowEngineConstants.ParameterName.REQUEST_ID);
+        requestParameter.setValue(workflowRequestId);
+        workflowRequest.setRequestParameters(Collections.singletonList(requestParameter));
+        workflowRequest.setUuid(workflowRequestId);
+        workflowRequest.setTenantId(CarbonContext.getThreadLocalCarbonContext().getTenantId());
+        return workflowRequest;
+    }
+
     @Override
     public void addApprovalTasksForWorkflowRequest(WorkflowRequest workflowRequest, List<Parameter> parameterList)
             throws WorkflowEngineException {
@@ -237,6 +325,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
            the first. */
         String workflowId = parameterList.get(0).getWorkflowId();
         String approverType;
+        String approverNotificationChannels = null;
 
         int currentStep = approvalTaskDAO.getCurrentApprovalStepOfWorkflowRequest(workflowRequestId, workflowId);
         if (currentStep == WorkflowEngineConstants.NO_CURRENT_STEP) {
@@ -247,25 +336,234 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             approvalTaskDAO.updateStateOfRequest(workflowRequestId, workflowId, currentStep);
         }
 
+        // Collect approvers to notify after processing all parameters.
+        Set<String> approversToNotify = new HashSet<>();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
+
+        // Single loop to extract notification channels and create approval tasks.
         for (Parameter parameter : parameterList) {
+            // Extract notification channels.
+            if (approverNotificationChannels == null && parameter.getParamName().equalsIgnoreCase(PARAM_NOTIFICATION)) {
+                if (parameter.getqName().startsWith(Q_NAME_APPROVER_CHANNELS_PREFIX)) {
+                    approverNotificationChannels = parameter.getParamValue();
+                }
+            }
+
+            // Process USER_AND_ROLE_STEP parameters.
             if (parameter.getParamName().equals(WorkflowEngineConstants.ParameterName.USER_AND_ROLE_STEP)) {
                 String[] stepName = parameter.getqName().split(WorkflowEngineConstants.Q_NAME_STEP_SEPARATOR);
                 int step = Integer.parseInt(stepName[1]);
                 if (currentStep == step) {
                     approverType = stepName[stepName.length - 1];
                     String approverIdentifiers = parameter.getParamValue();
-                    if (approverIdentifiers != null && !approverIdentifiers.isEmpty()) {
+                    if (StringUtils.isNotBlank(approverIdentifiers)) {
                         String[] approverIdentifierList = approverIdentifiers.split(COMMA_SEPARATOR, 0);
                         for (String approverIdentifier : approverIdentifierList) {
                             String taskId = UUID.randomUUID().toString();
                             approvalTaskDAO.addApproversOfRequest(taskId, workflowRequestId, workflowId,
                                     approverType,
                                     approverIdentifier, WorkflowEngineConstants.TaskStatus.READY.toString());
+
+                            // Collect approvers for notification after all parameters are processed.
+                            if (APPROVER_TYPE_ROLES.equalsIgnoreCase(approverType)) {
+                                approversToNotify.addAll(getAssignedUserIds(approverIdentifier, tenantDomain));
+                            } else {
+                                approversToNotify.add(approverIdentifier);
+                            }
                         }
                     }
                 }
             }
         }
+
+        // Trigger notifications after all parameters are processed and channels are extracted.
+        for (String approverIdentifier : approversToNotify) {
+            try {
+                triggerNotification(approverIdentifier, workflowRequestId, true,
+                        null, approverNotificationChannels);
+            } catch (WorkflowEngineException e) {
+                log.error("Error while triggering notification for approver: {}", approverIdentifier, e);
+            }
+        }
+    }
+
+    private List<String> parseChannels(String channel) {
+
+        if (StringUtils.isBlank(channel)) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(channel.split(","))
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .map(String::toLowerCase)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get server supported notification channel.
+     *
+     * @param channel Notification channel
+     * @return Server supported notification channel
+     */
+    private String getServerSupportedNotificationChannel(String channel) {
+
+        if (StringUtils.isEmpty(channel)) {
+            if (log.isDebugEnabled()) {
+                String message =
+                        "No notification channel in the request properties. Configuring the notification channel" +
+                                " to: " + NotificationChannels.EMAIL_CHANNEL.getChannelType();
+                log.debug(message);
+            }
+            return NotificationChannels.EMAIL_CHANNEL.getChannelType();
+        }
+        // Validate notification channels.
+        if (NotificationChannels.EMAIL_CHANNEL.getChannelType().equalsIgnoreCase(channel)) {
+            return NotificationChannels.EMAIL_CHANNEL.getChannelType();
+        } else if (NotificationChannels.SMS_CHANNEL.getChannelType().equalsIgnoreCase(channel)) {
+            return NotificationChannels.SMS_CHANNEL.getChannelType();
+        } else {
+            String defaultNotificationChannel = IdentityGovernanceUtil.getDefaultNotificationChannel();
+            if (log.isDebugEnabled()) {
+                String message = String.format("Not a server supported notification channel : %s. Therefore "
+                                + "default notification channel : %s will be used.", channel,
+                        defaultNotificationChannel);
+                log.debug(message);
+            }
+            return defaultNotificationChannel;
+        }
+    }
+
+    /**
+     * Resolves the contact claim URI based on the notification channel.
+     *
+     * @param channel The notification channel (sms or email).
+     * @return The claim URI for the channel.
+     */
+    private String resolveContactClaimUri(String channel) {
+
+        return CHANNEL_SMS.equalsIgnoreCase(channel) ? CLAIM_MOBILE : FrameworkConstants.EMAIL_ADDRESS_CLAIM;
+    }
+
+    private String getContact(int tenantId, String userId, String username, String claimUri)
+            throws WorkflowEngineServerException {
+
+        if (StringUtils.isNotBlank(userId)) {
+            return getUserClaimValue(tenantId, userId, claimUri);
+        }
+        return getUserClaimValueByUsername(tenantId, username, claimUri);
+    }
+
+    /**
+     * Triggers a notification for workflow events.
+     *
+     * @param recipientUserId       The user ID of the notification recipient.
+     * @param workflowRequestId     The workflow request ID.
+     * @param isInitialNotification True if notifying approver about new request, false if notifying requester
+     *                              about decision.
+     * @param decision              The approval decision (APPROVED/REJECTED), null for initial notifications.
+     * @param channel               The notification channel (e.g., email, SMS), null for default channel.
+     * @throws WorkflowEngineException If notification triggering fails.
+     */
+    private void triggerNotification(String recipientUserId, String workflowRequestId,
+                                     boolean isInitialNotification, String decision, String channel)
+            throws WorkflowEngineException {
+
+        List<String> channels = parseChannels(channel);
+
+        // Trigger a separate notification for each channel.
+        for (String ch : channels) {
+            String eventName = resolveEventName(ch);
+            if (StringUtils.isBlank(eventName)) {
+                log.debug("Unsupported notification channel: {}", ch);
+                continue;
+            }
+
+            try {
+                // Build properties specific to this channel.
+                Map<String, Object> notificationProperties = new HashMap<>();
+                String notificationChannel = getServerSupportedNotificationChannel(ch);
+                notificationProperties.put("notificationChannel", notificationChannel);
+                buildNotificationPropertiesForChannel(workflowRequestId, recipientUserId, isInitialNotification,
+                        decision, ch, notificationProperties);
+
+                Event notificationEvent = new Event(eventName, notificationProperties);
+                WorkflowEngineServiceDataHolder.getInstance().getIdentityEventService()
+                        .handleEvent(notificationEvent);
+            } catch (IdentityEventException e) {
+                // Continue with other channels even if one fails.
+                log.error("Error while sending the notification for channel: {}", ch, e);
+            } catch (WorkflowEngineException e) {
+                // Continue with other channels even if one fails.
+                log.error("Error while building notification properties for channel: {}", ch, e);
+            }
+        }
+    }
+
+    /**
+     * Builds notification properties for a specific channel.
+     *
+     * @param workflowRequestId     The workflow request ID.
+     * @param recipientUserId       The user ID of the notification recipient.
+     * @param isInitialNotification True for approver notification, false for requester notification.
+     * @param decision              The approval decision.
+     * @param channel               The notification channel (sms or email).
+     * @param properties            The properties map to populate.
+     * @throws WorkflowEngineException If property building fails.
+     */
+    private void buildNotificationPropertiesForChannel(String workflowRequestId, String recipientUserId,
+                                                       boolean isInitialNotification, String decision,
+                                                       String channel, Map<String, Object> properties)
+            throws WorkflowEngineException {
+
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest workflowRequest =
+                getWorkflowRequestBean(workflowRequestId);
+
+        if (isInitialNotification) {
+            buildApproverNotificationProperties(tenantId, recipientUserId, workflowRequestId,
+                    workflowRequest, channel, properties);
+        } else {
+            buildRequesterNotificationProperties(tenantId, recipientUserId, workflowRequestId,
+                    workflowRequest, decision, channel, properties);
+        }
+    }
+
+    /**
+     * Builds notification properties for approvers.
+     *
+     * @param tenantId          The tenant ID.
+     * @param approverUserId    The approver's user ID.
+     * @param workflowRequestId The workflow request ID.
+     * @param workflowRequest   The workflow request bean.
+     * @param channel           The notification channel (sms or email).
+     * @param properties        The properties map to populate.
+     * @throws WorkflowEngineException If property building fails.
+     */
+    private void buildApproverNotificationProperties(int tenantId, String approverUserId, String workflowRequestId,
+                                                     org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest
+                                                             workflowRequest,
+                                                     String channel, Map<String, Object> properties)
+            throws WorkflowEngineException {
+
+        String approvalUrl = FrameworkUtils.getMyAccountURL(null) + "/approvals";
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+
+        // Determine the claim URI based on channel.
+        String claimUri = resolveContactClaimUri(channel);
+        String approverContact = getContact(tenantId, approverUserId, null, claimUri);
+        String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
+
+        properties.put("TEMPLATE_TYPE", "workflowApproverNotification");
+        properties.put("approverName", approverUsername);
+        properties.put("send-to", approverContact);
+        properties.put("tenant-domain", tenantDomain);
+        properties.put("approvalActionUrl", approvalUrl);
+        properties.put("workflowId", workflowRequestId);
+        properties.put("requesterName", workflowRequest.getCreatedBy());
+        properties.put("submittedDate", workflowRequest.getCreatedAt());
+        properties.put("workflowType", workflowRequest.getOperationType());
+
     }
 
     @Override
@@ -410,6 +708,44 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
     }
 
+    /**
+     * Builds notification properties for requesters.
+     *
+     * @param tenantId          The tenant ID.
+     * @param approverUserId    The approver's user ID who made the decision.
+     * @param workflowRequestId The workflow request ID.
+     * @param workflowRequest   The workflow request bean.
+     * @param decision          The approval decision.
+     * @param channel           The notification channel (sms or email).
+     * @param properties        The properties map to populate.
+     * @throws WorkflowEngineException If property building fails.
+     */
+    private void buildRequesterNotificationProperties(int tenantId, String approverUserId, String workflowRequestId,
+                                                      org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest
+                                                              workflowRequest,
+                                                      String decision, String channel,
+                                                      Map<String, Object> properties)
+            throws WorkflowEngineException {
+
+        String requesterUsername = workflowRequest.getCreatedBy();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+
+        // Determine the claim URI based on channel.
+        String claimUri = resolveContactClaimUri(channel);
+        String requesterContact = getContact(tenantId, null, requesterUsername, claimUri);
+        String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
+
+        properties.put("TEMPLATE_TYPE", "workflowRequesterNotification");
+        properties.put("send-to", requesterContact);
+        properties.put("approverName", approverUsername);
+        properties.put("tenant-domain", tenantDomain);
+        properties.put("workflowId", workflowRequestId);
+        properties.put("workflowType", workflowRequest.getOperationType());
+        properties.put("decisionDate", new Timestamp(System.currentTimeMillis()).toString());
+        properties.put("decision", decision);
+        properties.put("requesterName", requesterUsername);
+    }
+
     private WorkflowRequest getWorkflowRequest(String requestId) throws WorkflowEngineException {
 
         try {
@@ -423,6 +759,22 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
+    private List<String> getAssignedUserIds(String roleId, String tenantDomain) throws WorkflowEngineException {
+
+        try {
+            List<UserBasicInfo> userIdList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().
+                    getUserListOfRole(roleId, tenantDomain);
+            List<String> userIds = new ArrayList<>();
+            for (UserBasicInfo userBasicInfo : userIdList) {
+                userIds.add(userBasicInfo.getId());
+            }
+            return userIds;
+        } catch (IdentityRoleManagementException e) {
+            throw new WorkflowEngineException(
+                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.
+                            getDescription(), e);
+        }
+    }
 
     private void validateApprovers(String taskId) throws WorkflowEngineException {
 
@@ -482,6 +834,19 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         return maxStep;
     }
 
+    private org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest getWorkflowRequestBean(String requestId)
+            throws WorkflowEngineException {
+
+        try {
+            return WorkflowEngineServiceDataHolder.getInstance().getWorkflowManagementService()
+                    .getWorkflowRequestBean(requestId);
+        } catch (WorkflowException e) {
+            throw new WorkflowEngineException(
+                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_WORKFLOW_REQUEST.
+                            getDescription(),
+                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_WORKFLOW_REQUEST.getCode());
+        }
+    }
 
     private void handleApproval(String approvalTaskId) throws WorkflowEngineException {
 
@@ -511,24 +876,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             WorkflowRequest workflowRequest = buildWorkflowRequest(workflowRequestId);
             addApprovalTasksForWorkflowRequest(workflowRequest, approvalWorkflowParameterList);
         } else {
-            completeWorkflowRequest(workflowRequestId, ApprovalTaskServiceImpl.APPROVED);
+            completeWorkflowRequest(workflowRequestId, ApprovalTaskServiceImpl.APPROVED, workflowId);
+
         }
-    }
-
-    private static WorkflowRequest buildWorkflowRequest(String workflowRequestId) {
-
-        WorkflowRequest workflowRequest = new WorkflowRequest();
-        RequestParameter requestParameter = new RequestParameter();
-        requestParameter.setName(WorkflowEngineConstants.ParameterName.REQUEST_ID);
-        requestParameter.setValue(workflowRequestId);
-        workflowRequest.setRequestParameters(Collections.singletonList(requestParameter));
-        workflowRequest.setUuid(workflowRequestId);
-        return workflowRequest;
     }
 
     private void handleReject(String approvalTaskId) throws WorkflowEngineServerException {
 
         String workflowRequestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
+        String workflowId = approvalTaskDAO.getWorkflowID(approvalTaskId);
         handleApprovalTaskCompletion(approvalTaskId, workflowRequestId, ApprovalTaskServiceImpl.REJECTED);
 
         // Audit log for rejection action.
@@ -539,7 +895,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 .newStatus(WorkflowEngineConstants.TaskStatus.REJECTED.toString());
         auditLogger.printAuditLog(auditBuilder);
 
-        completeWorkflowRequest(workflowRequestId, REJECTED);
+        completeWorkflowRequest(workflowRequestId, REJECTED, workflowId);
     }
 
     private void handleRelease(String taskId) throws WorkflowEngineServerException {
@@ -625,13 +981,34 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private void completeWorkflowRequest(String workflowRequestId, String status) throws WorkflowEngineServerException {
+    private void completeWorkflowRequest(String workflowRequestId, String status, String workflowId)
+            throws WorkflowEngineServerException {
 
         WSWorkflowResponse wsWorkflowResponse = new WSWorkflowResponse();
         String relationshipId = workflowRequestDAO.getRelationshipId(workflowRequestId);
         wsWorkflowResponse.setUuid(relationshipId);
         wsWorkflowResponse.setStatus(status);
         wsWorkflowCallBackService.onCallback(wsWorkflowResponse);
+
+        // Retrieve workflow parameters to get requester notification channels.
+        String requesterNotificationChannels = null;
+        try {
+            List<Parameter> parameterList = getApprovalWorkflowParameters(workflowId);
+            for (Parameter parameter : parameterList) {
+                if (parameter.getParamName().equalsIgnoreCase(PARAM_NOTIFICATION)) {
+                    String qName = parameter.getqName();
+                    if (StringUtils.isNotBlank(qName) && qName.startsWith(Q_NAME_INITIATOR_CHANNELS_PREFIX)) {
+                        requesterNotificationChannels = parameter.getParamValue();
+                        break;
+                    }
+                }
+            }
+
+            String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
+            triggerNotification(userId, workflowRequestId, false, status, requesterNotificationChannels);
+        } catch (WorkflowEngineException e) {
+            throw new WorkflowEngineServerException("Error while triggering requester notification.", e);
+        }
     }
 
     private List<Parameter> getApprovalWorkflowParameters(String workflowId) throws WorkflowEngineException {
@@ -682,7 +1059,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                     try {
                         AbstractUserStoreManager userStoreManager =
                                 (AbstractUserStoreManager) WorkflowEngineServiceDataHolder.getInstance()
-                                .getRealmService().getTenantUserRealm(workflowRequest.getTenantId())
+                                        .getRealmService().getTenantUserRealm(workflowRequest.getTenantId())
                                         .getUserStoreManager();
                         if (value instanceof List) {
                             List<String> userNames = userStoreManager.getUserNamesFromUserIDs((List<String>) value);

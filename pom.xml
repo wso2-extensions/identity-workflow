@@ -201,6 +201,11 @@
                 <scope>test</scope>
                 <version>${h2database.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.governance</groupId>
+                <artifactId>org.wso2.carbon.identity.governance</artifactId>
+                <version>${carbon.identity.governance.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -214,6 +219,7 @@
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
         <apache.felix.scr.ds.annotations.version>1.2.8</apache.felix.scr.ds.annotations.version>
         <carbon.identity.framework.version>7.8.539</carbon.identity.framework.version>
+        <carbon.identity.governance.version>1.11.158</carbon.identity.governance.version>
         <testng.version>7.4.0</testng.version>
         <mockito.version>3.2.4</mockito.version>
         <h2database.version>2.1.210</h2database.version>
@@ -221,6 +227,7 @@
         <osgi.framework.import.version.range>[1.2.0, 2.0.0)</osgi.framework.import.version.range>
         <osgi.service.component.import.version.range>[1.2.0, 2.0.0)</osgi.service.component.import.version.range>
         <carbon.identity.package.import.version.range>[7.5.0, 8.0.0)</carbon.identity.package.import.version.range>
+        <carbon.identity.governance.version.import.version.range>[1.10.0, 2.0.0)</carbon.identity.governance.version.import.version.range>
         <org.wso2.identity.organization.mgt.version>2.0.3</org.wso2.identity.organization.mgt.version>
         <org.wso2.identity.organization.mgt.import.version.range>[1.0.0,3.0.0)
         </org.wso2.identity.organization.mgt.import.version.range>
