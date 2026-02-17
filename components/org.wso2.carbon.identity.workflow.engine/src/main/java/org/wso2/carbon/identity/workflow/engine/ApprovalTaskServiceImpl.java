@@ -393,18 +393,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         // Trigger notifications after all parameters are processed and channels are extracted.
         for (String approverIdentifier : approversToNotify) {
-            try {
                 triggerNotification(approverIdentifier, workflowRequestId, true,
                         null, approverNotificationChannels);
-            } catch (WorkflowEngineException e) {
-                log.error("Error while triggering notification for approver: {}", approverIdentifier, e);
-            }
         }
     }
 
     private List<String> parseChannels(String channel) {
 
         if (StringUtils.isBlank(channel)) {
+            log.debug("Notification channel is not configured. No notifications will be sent.");
             return Collections.emptyList();
         }
         return Arrays.stream(channel.split(","))
@@ -478,11 +475,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      *                              about decision.
      * @param decision              The approval decision (APPROVED/REJECTED), null for initial notifications.
      * @param channel               The notification channel (e.g., email, SMS), null for default channel.
-     * @throws WorkflowEngineException If notification triggering fails.
      */
     private void triggerNotification(String recipientUserId, String workflowRequestId,
-                                     boolean isInitialNotification, String decision, String channel)
-            throws WorkflowEngineException {
+                                     boolean isInitialNotification, String decision, String channel) {
 
         List<String> channels = parseChannels(channel);
 
@@ -1024,7 +1019,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
             triggerNotification(userId, workflowRequestId, false, status, requesterNotificationChannels);
         } catch (WorkflowEngineException e) {
-            throw new WorkflowEngineServerException("Error while triggering requester notification.", e);
+            throw new WorkflowEngineServerException("Error while retrieving workflow parameters for requester " +
+                    "notification: " + e.getMessage(), e);
         }
     }
 
