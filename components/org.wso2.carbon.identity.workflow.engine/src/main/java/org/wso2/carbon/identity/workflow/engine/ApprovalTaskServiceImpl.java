@@ -118,7 +118,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private static final String CLAIM_MOBILE = "http://wso2.org/claims/mobile";
     private static final String PARAM_NOTIFICATION = "Notification";
     private static final String Q_NAME_APPROVER_CHANNELS_PREFIX = "NotificationForApprovers-channels";
-    private static final String APPROVER_TYPE_ROLES = "roles";
     private static final String NOTIFICATION_EVENT_NAME_PREFIX = "TRIGGER_";
     private static final String NOTIFICATION_EVENT_NAME_SUFFIX = "_NOTIFICATION";
     private static final String NOTIFICATION_EVENT_NAME_SUFFIX_LOCAL = "_LOCAL";
@@ -251,7 +250,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @return The claim value.
      * @throws WorkflowEngineServerException If claim retrieval fails.
      */
-    private static String getUserClaimValue(int tenantId, String userId, String claimUri)
+    private String getUserClaimValue(int tenantId, String userId, String claimUri)
             throws WorkflowEngineServerException {
 
         try {
@@ -290,7 +289,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param notificationChannel Notification channel
      * @return Resolved event name
      */
-    public static String resolveEventName(String notificationChannel) {
+    private String resolveEventName(String notificationChannel) {
 
         if (NotificationChannels.SMS_CHANNEL.getChannelType().equalsIgnoreCase(notificationChannel)) {
             return NOTIFICATION_EVENT_NAME_PREFIX + NotificationChannels.SMS_CHANNEL.getChannelType() +
@@ -300,7 +299,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private static WorkflowRequest buildWorkflowRequest(String workflowRequestId) {
+    private WorkflowRequest buildWorkflowRequest(String workflowRequestId) {
 
         WorkflowRequest workflowRequest = new WorkflowRequest();
         RequestParameter requestParameter = new RequestParameter();
@@ -365,8 +364,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                                     approverIdentifier, WorkflowEngineConstants.TaskStatus.READY.toString());
 
                             // Collect approvers for notification after all parameters are processed.
-                            if (APPROVER_TYPE_ROLES.equalsIgnoreCase(approverType)) {
-                                List<String> assignedUserIds = getAssignedUserIds(approverIdentifier, tenantDomain);
+                            if (WorkflowEngineConstants.APPROVER_TYPE_ROLES.equalsIgnoreCase(approverType)) {
+                                List<String> assignedUserIds = new ArrayList<>();
+                                try {
+                                    assignedUserIds = getAssignedUserIds(approverIdentifier, tenantDomain);
+                                } catch (WorkflowEngineException e) {
+                                    log.error("Error while retrieving assigned user IDs for role: {} in tenant: {}. " +
+                                                    "Continuing without adding notifications for this role.",
+                                            approverIdentifier, tenantDomain, e);
+                                }
                                 if (CollectionUtils.isEmpty(assignedUserIds)) {
                                     if (log.isDebugEnabled()) {
                                         log.debug("Role approver '{}' in tenant '{}' has no assigned users. " +
@@ -773,15 +779,17 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         try {
             List<UserBasicInfo> userIdList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().
                     getUserListOfRole(roleId, tenantDomain);
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved users for role: {} in tenant: {}. User count: {}", roleId, tenantDomain,
+                        userIdList.size());
+            }
             List<String> userIds = new ArrayList<>();
             for (UserBasicInfo userBasicInfo : userIdList) {
                 userIds.add(userBasicInfo.getId());
             }
             return userIds;
         } catch (IdentityRoleManagementException e) {
-            throw new WorkflowEngineException(
-                    WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.
-                            getDescription(), e);
+            throw new WorkflowEngineException("Error occurred while retrieving users assigned to role.", e);
         }
     }
 
