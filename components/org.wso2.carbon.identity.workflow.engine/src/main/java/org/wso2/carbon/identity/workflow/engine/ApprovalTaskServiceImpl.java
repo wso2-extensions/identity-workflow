@@ -68,6 +68,10 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -75,6 +79,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -566,6 +571,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String claimUri = resolveContactClaimUri(channel);
         String approverContact = getContact(tenantId, approverUserId, null, claimUri);
         String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
+        String createdDate = formatIsoUtc(workflowRequest.getCreatedAt());
 
         properties.put("TEMPLATE_TYPE", "WorkflowApproverNotification");
         properties.put("approverName", approverUsername);
@@ -574,9 +580,23 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("approvalActionUrl", approvalUrl);
         properties.put("workflowId", workflowRequestId);
         properties.put("requesterName", workflowRequest.getCreatedBy());
-        properties.put("submittedDate", workflowRequest.getCreatedAt());
+        properties.put("submittedDate", createdDate);
         properties.put("workflowType", workflowRequest.getOperationType());
 
+    }
+
+    private String formatIsoUtc(String isoString) {
+
+        if (isoString == null || isoString.isEmpty()) {
+            return "-";
+        }
+
+        Instant instant = Instant.parse(isoString);
+        ZonedDateTime localDateTime =
+                instant.atZone(ZoneId.systemDefault());
+
+        return localDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy 'at' h:mm a",
+                Locale.ENGLISH));
     }
 
     @Override
@@ -747,6 +767,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String claimUri = resolveContactClaimUri(channel);
         String requesterContact = getContact(tenantId, null, requesterUsername, claimUri);
         String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
+        String decisionDate = formatIsoUtc(workflowRequest.getUpdatedAt());
 
         properties.put("TEMPLATE_TYPE", "WorkflowRequesterNotification");
         properties.put("send-to", requesterContact);
@@ -754,7 +775,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("tenant-domain", tenantDomain);
         properties.put("workflowId", workflowRequestId);
         properties.put("workflowType", workflowRequest.getOperationType());
-        properties.put("decisionDate", new Timestamp(System.currentTimeMillis()).toString());
+        properties.put("decisionDate", decisionDate);
         properties.put("decision", decision);
         properties.put("requesterName", requesterUsername);
     }
