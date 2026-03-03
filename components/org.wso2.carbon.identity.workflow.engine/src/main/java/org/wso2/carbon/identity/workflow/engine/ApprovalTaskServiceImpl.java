@@ -542,7 +542,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             buildApproverNotificationProperties(tenantId, recipientUserId, workflowRequestId,
                     workflowRequest, channel, properties);
         } else {
-            buildRequesterNotificationProperties(tenantId, recipientUserId, workflowRequestId,
+            buildRequesterNotificationProperties(tenantId, workflowRequestId,
                     workflowRequest, decision, channel, properties);
         }
     }
@@ -745,7 +745,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * Builds notification properties for requesters.
      *
      * @param tenantId          The tenant ID.
-     * @param approverUserId    The approver's user ID who made the decision.
      * @param workflowRequestId The workflow request ID.
      * @param workflowRequest   The workflow request bean.
      * @param decision          The approval decision.
@@ -753,7 +752,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param properties        The properties map to populate.
      * @throws WorkflowEngineException If property building fails.
      */
-    private void buildRequesterNotificationProperties(int tenantId, String approverUserId, String workflowRequestId,
+    private void buildRequesterNotificationProperties(int tenantId, String workflowRequestId,
                                                       org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest
                                                               workflowRequest,
                                                       String decision, String channel,
@@ -766,12 +765,10 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         // Determine the claim URI based on channel.
         String claimUri = resolveContactClaimUri(channel);
         String requesterContact = getContact(tenantId, null, requesterUsername, claimUri);
-        String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
         String decisionDate = formatIsoUtc(workflowRequest.getUpdatedAt());
 
         properties.put("TEMPLATE_TYPE", "WorkflowRequesterNotification");
         properties.put("send-to", requesterContact);
-        properties.put("approverName", approverUsername);
         properties.put("tenant-domain", tenantDomain);
         properties.put("workflowId", workflowRequestId);
         properties.put("workflowType", workflowRequest.getOperationType());
