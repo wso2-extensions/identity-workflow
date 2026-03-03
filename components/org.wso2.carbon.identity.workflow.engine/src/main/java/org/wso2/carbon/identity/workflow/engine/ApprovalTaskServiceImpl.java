@@ -487,12 +487,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         // Trigger a separate notification for each channel.
         for (String ch : channels) {
-            String eventName = resolveEventName(ch);
-            if (StringUtils.isBlank(eventName)) {
-                log.debug("Unsupported notification channel: {}", ch);
-                continue;
-            }
-
             try {
                 // Build properties specific to this channel.
                 Map<String, Object> notificationProperties = new HashMap<>();
@@ -501,6 +495,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 buildNotificationPropertiesForChannel(workflowRequestId, recipientUserId, isInitialNotification,
                         decision, ch, notificationProperties);
 
+                String eventName = resolveEventName(notificationChannel);
+                if (StringUtils.isBlank(eventName)) {
+                    log.debug("Unsupported notification channel: {}", ch);
+                    continue;
+                }
                 Event notificationEvent = new Event(eventName, notificationProperties);
                 WorkflowEngineServiceDataHolder.getInstance().getIdentityEventService()
                         .handleEvent(notificationEvent);
