@@ -343,7 +343,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         for (Parameter parameter : parameterList) {
             // Extract notification channels.
             if (approverNotificationChannels == null && parameter.getParamName().equalsIgnoreCase(PARAM_NOTIFICATION)) {
-                if (parameter.getqName().startsWith(Q_NAME_APPROVER_CHANNELS_PREFIX)) {
+                if (StringUtils.isNotBlank(parameter.getqName()) &&
+                        parameter.getqName().startsWith(Q_NAME_APPROVER_CHANNELS_PREFIX)) {
                     approverNotificationChannels = parameter.getParamValue();
                 }
             }
@@ -462,6 +463,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         if (StringUtils.isNotBlank(userId)) {
             return getUserClaimValue(tenantId, userId, claimUri);
+        }
+        if (StringUtils.isBlank(username)) {
+            return StringUtils.EMPTY;
         }
         return getUserClaimValueByUsername(tenantId, username, claimUri);
     }
@@ -1019,8 +1023,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
             triggerNotification(userId, workflowRequestId, false, status, requesterNotificationChannels);
         } catch (WorkflowEngineException e) {
-            throw new WorkflowEngineServerException("Error while retrieving workflow parameters for requester " +
-                    "notification: " + e.getMessage(), e);
+            log.error("Error while retrieving workflow parameters for requester notification for work flow : {}",
+                    workflowId, e);
         }
     }
 
