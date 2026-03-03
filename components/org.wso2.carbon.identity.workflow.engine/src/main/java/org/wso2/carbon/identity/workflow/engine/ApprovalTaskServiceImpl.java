@@ -567,7 +567,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String approverContact = getContact(tenantId, approverUserId, null, claimUri);
         String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
 
-        properties.put("TEMPLATE_TYPE", "workflowApproverNotification");
+        properties.put("TEMPLATE_TYPE", "WorkflowApproverNotification");
         properties.put("approverName", approverUsername);
         properties.put("send-to", approverContact);
         properties.put("tenant-domain", tenantDomain);
@@ -748,7 +748,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String requesterContact = getContact(tenantId, null, requesterUsername, claimUri);
         String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
 
-        properties.put("TEMPLATE_TYPE", "workflowRequesterNotification");
+        properties.put("TEMPLATE_TYPE", "WorkflowRequesterNotification");
         properties.put("send-to", requesterContact);
         properties.put("approverName", approverUsername);
         properties.put("tenant-domain", tenantDomain);
