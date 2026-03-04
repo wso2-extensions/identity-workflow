@@ -483,15 +483,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      */
     private String getServerSupportedNotificationChannel(String channel) {
 
-        if (StringUtils.isEmpty(channel)) {
-            if (log.isDebugEnabled()) {
-                String message =
-                        "No notification channel in the request properties. Configuring the notification channel" +
-                                " to: " + NotificationChannels.EMAIL_CHANNEL.getChannelType();
-                log.debug(message);
-            }
-            return NotificationChannels.EMAIL_CHANNEL.getChannelType();
-        }
         // Validate notification channels.
         if (NotificationChannels.EMAIL_CHANNEL.getChannelType().equalsIgnoreCase(channel)) {
             return NotificationChannels.EMAIL_CHANNEL.getChannelType();
@@ -520,18 +511,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         return CHANNEL_SMS.equalsIgnoreCase(channel) ? CLAIM_MOBILE : FrameworkConstants.EMAIL_ADDRESS_CLAIM;
     }
 
-    private String getUserContactByClaimUri(int tenantId, String userId, String username, String claimUri)
-            throws WorkflowEngineServerException {
-
-        if (StringUtils.isNotBlank(userId)) {
-            return getUserClaimValue(tenantId, userId, claimUri);
-        }
-        if (StringUtils.isBlank(username)) {
-            return StringUtils.EMPTY;
-        }
-        return getUserClaimValueByUsername(tenantId, username, claimUri);
-    }
-
     /**
      * Triggers a notification for workflow events.
      *
@@ -553,7 +532,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 // Build properties specific to this channel.
                 Map<String, Object> notificationProperties = new HashMap<>();
                 String notificationChannel = getServerSupportedNotificationChannel(ch);
-                notificationProperties.put("notificationChannel", notificationChannel);
+                notificationProperties.put("notification-channel", notificationChannel);
                 buildNotificationPropertiesForChannel(workflowRequestId, approverUserId, isApproverNotification,
                         decision, ch, notificationProperties);
 
@@ -626,7 +605,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         // Determine the claim URI based on channel.
         String claimUri = getClaimUriForChannel(channel);
-        String approverContact = getUserContactByClaimUri(tenantId, approverUserId, null, claimUri);
+
+        // Get approver's contact information (email or mobile) based on the notification channel.
+        String approverContact = getUserClaimValue(tenantId, approverUserId, claimUri);
+
+        // Get approver's username for display purposes.
         String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
         String createdDate = formatIsoUtc(workflowRequest.getCreatedAt());
 
@@ -821,7 +804,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         // Determine the claim URI based on channel.
         String claimUri = getClaimUriForChannel(channel);
-        String initiatorContact = getUserContactByClaimUri(tenantId, null, initiatorUsername, claimUri);
+        String initiatorContact = getUserClaimValueByUsername(tenantId, initiatorUsername, claimUri);
         String decisionDate = formatIsoUtc(workflowRequest.getUpdatedAt());
 
         properties.put("TEMPLATE_TYPE", "WorkflowInitiatorNotification");
