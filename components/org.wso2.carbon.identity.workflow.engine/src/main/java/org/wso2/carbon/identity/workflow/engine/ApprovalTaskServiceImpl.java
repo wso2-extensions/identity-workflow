@@ -29,7 +29,9 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.core.ThreadLocalAwareExecutors;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
@@ -85,6 +87,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants.DISPLAY_NAME_PROPERTY;
@@ -128,6 +131,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private static final String NOTIFICATION_EVENT_NAME_PREFIX = "TRIGGER_";
     private static final String NOTIFICATION_EVENT_NAME_SUFFIX = "_NOTIFICATION";
     private static final String NOTIFICATION_EVENT_NAME_SUFFIX_LOCAL = "_LOCAL";
+    private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    private final ExecutorService executorService = ThreadLocalAwareExecutors.newFixedThreadPool(THREAD_POOL_SIZE);
 
     @Override
     public List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> statusList)
@@ -382,9 +387,30 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         // Trigger notifications asynchronously to avoid blocking the main thread.
         if (CollectionUtils.isNotEmpty(approversToNotify)) {
+            int approverCount = approversToNotify.size();
+            int maxApproverNotifications = IdentityUtil.getMaxApproverNotificationForWorkFlow();
+            int notificationCount = Math.min(approverCount, maxApproverNotifications);
+
+            if (approverCount > maxApproverNotifications) {
+                log.warn("Number of approvers ({}) exceeds the maximum allowed limit ({}). " +
+                        "Notifications will be sent to only the first {} approvers to prevent memory issues. " +
+                        "WorkflowRequestId: {}",
+                        approverCount, maxApproverNotifications, maxApproverNotifications, workflowRequestId);
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Triggering notifications for {} approvers asynchronously. WorkflowRequestId: {}",
+                        notificationCount, workflowRequestId);
+            }
+
+            int count = 0;
             for (String approverUserId : approversToNotify) {
+                if (count >= maxApproverNotifications) {
+                    break;
+                }
                 executeNotificationAsync(approverUserId, workflowRequestId, true, null,
                         approverNotificationChannels);
+                count++;
             }
         }
     }
@@ -403,10 +429,12 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                                           String notificationChannels) {
 
         // Capture tenant context before async execution.
+        // Note: ThreadLocalAwareExecutors only propagates MDC context, not CarbonContext.
+        // CompletableFuture.supplyAsync() also bypasses the execute() override, so we need manual propagation.
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.supplyAsync(() -> {
             try {
                 // Set the tenant context in the async thread.
                 PrivilegedCarbonContext.startTenantFlow();
@@ -415,14 +443,16 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
                 triggerNotification(recipientUserId, workflowRequestId, isApproverNotification, decision,
                         notificationChannels);
+                return null;
             } catch (Exception e) {
                 String recipientType = isApproverNotification ? "approver" : "initiator";
                 log.error("Error while triggering notification for {}: {}", recipientType, recipientUserId, e);
+                return null;
             } finally {
                 // Clean up tenant context.
                 PrivilegedCarbonContext.endTenantFlow();
             }
-        });
+        }, executorService);
     }
 
     /**

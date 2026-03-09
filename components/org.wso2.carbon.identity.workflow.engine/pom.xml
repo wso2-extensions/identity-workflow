@@ -112,6 +112,7 @@
                                  org.wso2.carbon.identity.role.v2.mgt.core.model; version="${carbon.identity.package.import.version.range}",
                                  org.wso2.carbon.identity.central.log.mgt.utils; version="${carbon.identity.package.import.version.range}",
                                  org.wso2.carbon.identity.core.util; version="${carbon.identity.package.import.version.range}",
+                                 org.wso2.carbon.identity.core; version="${carbon.identity.package.import.version.range}",
                                  org.wso2.carbon.identity.claim.metadata.mgt; version="${carbon.identity.package.import.version.range}",
                                  org.wso2.carbon.identity.claim.metadata.mgt.exception; version="${carbon.identity.package.import.version.range}",
                                  org.wso2.carbon.identity.claim.metadata.mgt.model; version="${carbon.identity.package.import.version.range}",

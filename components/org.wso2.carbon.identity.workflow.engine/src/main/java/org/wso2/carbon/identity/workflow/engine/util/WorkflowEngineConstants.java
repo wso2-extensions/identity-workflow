@@ -40,6 +40,16 @@ public class WorkflowEngineConstants {
     public static final String Q_NAME_STEP_SEPARATOR = "-";
 
     /**
+     * Configuration constants for workflow engine.
+     */
+    public static class Configurations {
+
+        public static final String WORKFLOW_ENGINE_CONFIG_ELEMENT = "WorkflowEngine";
+        public static final String MAX_APPROVER_NOTIFICATIONS_CONFIG = "WorkflowEngine.MaxApproverNotifications";
+        public static final int DEFAULT_MAX_APPROVER_NOTIFICATIONS = 15;
+    }
+
+    /**
      * SQL Query definitions.
      */
     public static class SqlQueries {
