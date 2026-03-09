@@ -26,7 +26,7 @@
     <groupId>org.wso2.carbon.identity.workflow</groupId>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>identity-workflow</artifactId>
-    <version>1.0.23-SNAPSHOT</version>
+    <version>1.1.2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon - Identity Workflow</name>
     <description>
@@ -51,7 +51,7 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>5.1.9</version>
                 <extensions>true</extensions>
                 <configuration>
                     <obrRepository>NONE</obrRepository>
@@ -103,6 +103,11 @@
                     <doUpdate>false</doUpdate>
                 </configuration>
             </plugin>
+            <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${spotbugs.maven.plugin.version}</version>
+                </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -210,12 +215,12 @@
     </dependencyManagement>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
-        <maven.findbugsplugin.version>3.0.5</maven.findbugsplugin.version>
+        <spotbugs.maven.plugin.version>4.9.8.2</spotbugs.maven.plugin.version>
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
         <apache.felix.scr.ds.annotations.version>1.2.8</apache.felix.scr.ds.annotations.version>
         <carbon.identity.framework.version>7.8.539</carbon.identity.framework.version>
