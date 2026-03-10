@@ -71,10 +71,6 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
 import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -82,7 +78,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -388,7 +383,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         // Trigger notifications asynchronously to avoid blocking the main thread.
         if (CollectionUtils.isNotEmpty(approversToNotify)) {
             int approverCount = approversToNotify.size();
-            int maxApproverNotifications = IdentityUtil.getMaxApproverNotificationForWorkFlow();
+            int maxApproverNotifications = IdentityUtil.getMaxApproverNotificationsForWorkflow();
             int notificationCount = Math.min(approverCount, maxApproverNotifications);
 
             if (approverCount > maxApproverNotifications) {
@@ -641,7 +636,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         // Get approver's username for display purposes.
         String approverUsername = getUserClaimValue(tenantId, approverUserId, FrameworkConstants.USERNAME_CLAIM);
-        String createdDate = formatIsoUtc(workflowRequest.getCreatedAt());
 
         properties.put("TEMPLATE_TYPE", "WorkflowApproverNotification");
         properties.put("approverName", approverUsername);
@@ -650,23 +644,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("approvalActionUrl", approvalUrl);
         properties.put("workflowId", workflowRequestId);
         properties.put("initiatorName", workflowRequest.getCreatedBy());
-        properties.put("submittedDate", createdDate);
         properties.put("workflowType", workflowRequest.getOperationType());
 
-    }
-
-    private String formatIsoUtc(String isoString) {
-
-        if (isoString == null || isoString.isEmpty()) {
-            return "-";
-        }
-
-        Instant instant = Instant.parse(isoString);
-        ZonedDateTime localDateTime =
-                instant.atZone(ZoneId.systemDefault());
-
-        return localDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy 'at' h:mm a",
-                Locale.ENGLISH));
     }
 
     @Override
@@ -835,15 +814,17 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         // Determine the claim URI based on channel.
         String claimUri = getClaimUriForChannel(channel);
         String initiatorContact = getUserClaimValueByUsername(tenantId, initiatorUsername, claimUri);
-        String decisionDate = formatIsoUtc(workflowRequest.getUpdatedAt());
 
         properties.put("TEMPLATE_TYPE", "WorkflowInitiatorNotification");
         properties.put("send-to", initiatorContact);
         properties.put("tenant-domain", tenantDomain);
         properties.put("workflowId", workflowRequestId);
         properties.put("workflowType", workflowRequest.getOperationType());
-        properties.put("decisionDate", decisionDate);
-        properties.put("decision", decision);
+        // Convert decision to title case (e.g., "APPROVED" -> "Approved").
+        String formattedDecision = StringUtils.isNotBlank(decision)
+                ? decision.substring(0, 1).toUpperCase() + decision.substring(1).toLowerCase()
+                : decision;
+        properties.put("decision", formattedDecision);
         properties.put("initiatorName", initiatorUsername);
     }
 
