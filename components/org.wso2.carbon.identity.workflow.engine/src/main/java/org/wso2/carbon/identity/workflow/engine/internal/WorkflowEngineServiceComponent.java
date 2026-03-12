@@ -25,6 +25,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.workflow.engine.ApprovalTaskServiceImpl;
 import org.wso2.carbon.identity.workflow.engine.DefaultApprovalWorkflow;
@@ -94,6 +95,23 @@ public class WorkflowEngineServiceComponent {
     protected void unsetWorkflowManagementService(WorkflowManagementService workflowManagementService) {
 
         WorkflowEngineServiceDataHolder.getInstance().setWorkflowManagementService(null);
+    }
+
+    @Reference(
+            name = "identity.event.service",
+            service = IdentityEventService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityEventService"
+    )
+    private void setIdentityEventService(IdentityEventService identityEventService) {
+
+        WorkflowEngineServiceDataHolder.getInstance().setIdentityEventService(identityEventService);
+    }
+
+    private void unsetIdentityEventService(IdentityEventService identityEventService) {
+
+        WorkflowEngineServiceDataHolder.getInstance().setIdentityEventService(null);
     }
 
     @Reference(
