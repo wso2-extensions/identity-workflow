@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.workflow.engine.internal.dao.WorkflowRequestDAO;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 /**
  * Implementation of {@link WorkflowRequestDAO} to handle workflow request related database operations.
@@ -37,25 +38,47 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
     private static final Log log = LogFactory.getLog(WorkflowRequestDAOImpl.class.getName());
 
     @Override
-    public String getRelationshipId(String requestId) throws WorkflowEngineServerException {
+    public String getRelationshipId(String workflowRequestId, String workflowId) throws WorkflowEngineServerException {
 
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
-        String taskStatus;
         try {
-            taskStatus = jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
+            return jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
                             GET_REQUEST_ID_OF_RELATIONSHIP,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.RELATIONSHIP_ID_IN_REQUEST_COLUMN))),
-                    preparedStatement -> preparedStatement.setString(1, requestId));
+                    preparedStatement -> {
+                            preparedStatement.setString(1, workflowRequestId);
+                            preparedStatement.setString(2, workflowId);
+                    });
         } catch (DataAccessException e) {
             String errorMessage = String.format("Error occurred while retrieving relationship ID from" +
-                    "event Id: %s", requestId);
+                    "event Id: %s and workflow Id: %s", workflowRequestId, workflowId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
             throw new WorkflowEngineServerException(errorMessage, e);
         }
-        return taskStatus;
+    }
+
+    @Override
+    public List<String> getRelationshipIds(String workflowRequestId) throws WorkflowEngineServerException {
+
+        JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+        try {
+            return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
+                            GET_REQUEST_ID_OF_RELATIONSHIP,
+                    ((resultSet, i) -> (
+                            resultSet.getString(WorkflowEngineConstants.RELATIONSHIP_ID_IN_REQUEST_COLUMN))),
+                    preparedStatement -> preparedStatement.setString(1,
+                            workflowRequestId));
+        } catch (DataAccessException e) {
+            String errorMessage = String.format("Error occurred while retrieving relationship IDs from" +
+                    "workflow request Id: %s", workflowRequestId);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new WorkflowEngineServerException(errorMessage, e);
+        }
     }
 
     @Override
