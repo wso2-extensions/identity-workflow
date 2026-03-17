@@ -964,6 +964,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private void handleReject(String approvalTaskId) throws WorkflowEngineException {
 
         String workflowRequestId = approvalTaskDAO.getWorkflowRequestIdByApprovalTaskId(approvalTaskId);
+        String workflowId = approvalTaskDAO.getWorkflowID(approvalTaskId);
         handleApprovalTaskRejection(approvalTaskId, workflowRequestId);
 
         // Audit log for rejection action.
@@ -974,7 +975,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 .newStatus(WorkflowEngineConstants.TaskStatus.REJECTED.toString());
         auditLogger.printAuditLog(auditBuilder);
 
-        completeWorkflowReject(workflowRequestId);
+        completeWorkflowReject(workflowRequestId, workflowId);
     }
 
     private void handleRelease(String taskId) throws WorkflowEngineServerException {
@@ -1084,7 +1085,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
-    private void completeWorkflowReject(String workflowRequestId) throws WorkflowEngineException {
+    private void completeWorkflowReject(String workflowRequestId, String workflowId) throws WorkflowEngineException {
 
         WSWorkflowResponse wsWorkflowResponse = new WSWorkflowResponse();
         List<String> workflowRelationshipIds = workflowRequestDAO.getRelationshipIds(workflowRequestId);
@@ -1092,6 +1093,17 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             wsWorkflowResponse.setUuid(relationshipId);
             wsWorkflowResponse.setStatus(REJECTED);
             wsWorkflowCallBackService.onCallback(wsWorkflowResponse);
+        }
+
+        // Trigger initiator notification asynchronously.
+        try {
+            String notificationChannels = extractWorkFlowInitiatorNotificationChannels(workflowId);
+            String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
+
+            executeNotificationAsync(userId, workflowRequestId, false, APPROVED, notificationChannels);
+        } catch (WorkflowEngineException e) {
+            log.error("Error while retrieving workflow parameters for initiator notification for workflow: {}",
+                    workflowId, e);
         }
     }
 

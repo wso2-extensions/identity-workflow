@@ -43,7 +43,7 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
             return jdbcTemplate.fetchSingleRecord(WorkflowEngineConstants.SqlQueries.
-                            GET_REQUEST_ID_OF_RELATIONSHIP,
+                            GET_RELATIONSHIP_ID_BY_REQUEST_ID_AND_WORKFLOW_ID,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.RELATIONSHIP_ID_IN_REQUEST_COLUMN))),
                     preparedStatement -> {
@@ -51,8 +51,8 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
                             preparedStatement.setString(2, workflowId);
                     });
         } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving relationship ID from" +
-                    "event Id: %s and workflow Id: %s", workflowRequestId, workflowId);
+            String errorMessage = String.format("Error occurred while retrieving relationship ID from " +
+                    "workflow request Id: %s and workflow Id: %s", workflowRequestId, workflowId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -66,13 +66,13 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
         JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
         try {
             return jdbcTemplate.executeQuery(WorkflowEngineConstants.SqlQueries.
-                            GET_REQUEST_ID_OF_RELATIONSHIP,
+                            GET_RELATIONSHIP_IDS_BY_REQUEST_ID,
                     ((resultSet, i) -> (
                             resultSet.getString(WorkflowEngineConstants.RELATIONSHIP_ID_IN_REQUEST_COLUMN))),
                     preparedStatement -> preparedStatement.setString(1,
                             workflowRequestId));
         } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving relationship IDs from" +
+            String errorMessage = String.format("Error occurred while retrieving relationship IDs from " +
                     "workflow request Id: %s", workflowRequestId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
@@ -93,8 +93,8 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
                             resultSet.getString(WorkflowEngineConstants.CREATED_USER_COLUMN))),
                     preparedStatement -> preparedStatement.setString(1, requestId));
         } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving initiator from" +
-                    "requestId: %s", requestId);
+            String errorMessage = String.format("Error occurred while retrieving initiator from " +
+                    "workflow requestId: %s", requestId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -115,8 +115,8 @@ public class WorkflowRequestDAOImpl implements WorkflowRequestDAO {
                             resultSet.getTimestamp(WorkflowEngineConstants.CREATED_AT_IN_MILL_COLUMN))),
                     preparedStatement -> preparedStatement.setString(1, requestId));
         } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving createdAt time from" +
-                    "request Id: %s", requestId);
+            String errorMessage = String.format("Error occurred while retrieving createdAt time from " +
+                    "workflow request Id: %s", requestId);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
