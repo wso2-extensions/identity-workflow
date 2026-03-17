@@ -31,6 +31,7 @@ public interface WorkflowRequestDAO {
      * Returns the relationship ID given the request ID.
      *
      * @param requestId the event ID that need to be checked.
+     * @param workflowId the workflow ID that need to be checked.
      * @return the relationship ID.
      */
     String getRelationshipId(String requestId, String workflowId) throws WorkflowEngineServerException;
