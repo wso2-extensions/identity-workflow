@@ -1100,7 +1100,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             String notificationChannels = extractWorkFlowInitiatorNotificationChannels(workflowId);
             String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
 
-            executeNotificationAsync(userId, workflowRequestId, false, REJECTED, notificationChannels);
+            if (StringUtils.isNotBlank(notificationChannels)) {
+                executeNotificationAsync(userId, workflowRequestId, false, REJECTED, notificationChannels);
+            }
         } catch (WorkflowEngineException e) {
             log.error("Error while retrieving workflow parameters for initiator notification for workflow: {}",
                     workflowId, e);
