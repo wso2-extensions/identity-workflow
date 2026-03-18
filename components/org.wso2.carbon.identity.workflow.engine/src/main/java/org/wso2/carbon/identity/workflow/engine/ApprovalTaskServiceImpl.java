@@ -381,7 +381,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
 
         // Trigger notifications asynchronously to avoid blocking the main thread.
-        if (CollectionUtils.isNotEmpty(approversToNotify)) {
+        if (CollectionUtils.isNotEmpty(approversToNotify) && StringUtils.isNotBlank(approverNotificationChannels)) {
             int approverCount = approversToNotify.size();
             int maxApproverNotifications = IdentityUtil.getMaxApproverNotificationsForWorkflow();
             int notificationCount = Math.min(approverCount, maxApproverNotifications);
@@ -1074,8 +1074,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         try {
             String notificationChannels = extractWorkFlowInitiatorNotificationChannels(workflowId);
             String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
-
-            executeNotificationAsync(userId, workflowRequestId, false, status, notificationChannels);
+            if (StringUtils.isNotBlank(notificationChannels)) {
+                executeNotificationAsync(userId, workflowRequestId, false, status, notificationChannels);
+            }
         } catch (WorkflowEngineException e) {
             log.error("Error while retrieving workflow parameters for initiator notification for workflow: {}",
                     workflowId, e);
