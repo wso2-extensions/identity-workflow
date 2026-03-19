@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.governance.IdentityGovernanceUtil;
 import org.wso2.carbon.identity.governance.service.notification.NotificationChannels;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementClientException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
@@ -783,6 +784,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             List<String> roleIDList = WorkflowEngineServiceDataHolder.getInstance().getRoleManagementService().
                     getRoleIdListOfUser(userId, tenantDomain);
             return new ArrayList<>(roleIDList);
+        } catch (IdentityRoleManagementClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+            }
+            return Collections.emptyList();
         } catch (IdentityRoleManagementException e) {
             throw new WorkflowEngineException(
                     WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.
