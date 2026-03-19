@@ -788,7 +788,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             if (log.isDebugEnabled()) {
                 log.debug(e.getMessage(), e);
             }
-            return Collections.emptyList();
+            return new ArrayList<>();
         } catch (IdentityRoleManagementException e) {
             throw new WorkflowEngineException(
                     WorkflowEngineConstants.ErrorMessages.ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.
