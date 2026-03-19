@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.workflow.engine.internal.dao;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 /**
  * WorkflowRequestDAO interface provides methods to manage workflow requests.
@@ -30,9 +31,18 @@ public interface WorkflowRequestDAO {
      * Returns the relationship ID given the request ID.
      *
      * @param requestId the event ID that need to be checked.
+     * @param workflowId the workflow ID that need to be checked.
      * @return the relationship ID.
      */
-    String getRelationshipId(String requestId) throws WorkflowEngineServerException;
+    String getRelationshipId(String requestId, String workflowId) throws WorkflowEngineServerException;
+
+    /**
+     * Returns the relationship IDs given the request ID.
+     *
+     * @param requestId the event ID that need to be checked.
+     * @return the relationship IDs.
+     */
+    List<String> getRelationshipIds(String requestId) throws WorkflowEngineServerException;
 
     /**
      * Returns the initiator given the request ID.
