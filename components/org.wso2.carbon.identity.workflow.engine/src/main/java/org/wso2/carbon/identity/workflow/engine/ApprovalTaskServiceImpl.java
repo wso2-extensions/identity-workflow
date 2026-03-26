@@ -109,14 +109,12 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             new ClaimMetadataManagementServiceImpl();
     private final ApprovalTaskAuditLogger auditLogger = new ApprovalTaskAuditLogger();
 
-    private static final String CLAIMS_PARAM_NAME = "Claims";
     private static final String ROLE_ID_PARAM_NAME = "Role ID";
     private static final String ROLE_NAME_PARAM_NAME = "Role Name";
     private static final String USERS_TO_BE_ADDED_PARAM_NAME = "Users to be Added";
     private static final String USERS_TO_BE_DELETED_PARAM_NAME = "Users to be Deleted";
     private static final String ROLE_ASSOCIATED_APPLICATION_PARAM_NAME = "Role Associated Application";
     private static final String TENANT_DOMAIN_PARAM_NAME = "Tenant Domain";
-    private static final String AUDIENCE_ID_PARAM_NAME = "Audience ID";
     private static final String COMMA_SEPARATOR = ",";
     private static final String ROLE_NOT_FOUND_ERROR_CODE = "RMA-60007";
     private static final String Q_NAME_INITIATOR_CHANNELS_PREFIX = "NotificationForInitiator-channels";
@@ -405,7 +403,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 if (count >= maxApproverNotifications) {
                     break;
                 }
-                executeNotificationAsync(approverUserId, workflowRequestId, true, null,
+                executeNotificationAsync(approverUserId, workflowId, workflowRequestId, true, null,
                         approverNotificationChannels);
                 count++;
             }
@@ -416,12 +414,13 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * Executes a single notification asynchronously with proper tenant context propagation.
      *
      * @param recipientUserId        The recipient user ID.
+     * @param workflowId             The workflow ID.
      * @param workflowRequestId      The workflow request ID.
      * @param isApproverNotification True for approver notification, false for initiator notification.
      * @param decision               The approval decision (for initiator notifications).
      * @param notificationChannels   The notification channels configuration.
      */
-    private void executeNotificationAsync(String recipientUserId, String workflowRequestId,
+    private void executeNotificationAsync(String recipientUserId, String workflowId, String workflowRequestId,
                                           boolean isApproverNotification, String decision,
                                           String notificationChannels) {
 
@@ -438,7 +437,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
 
-                triggerNotification(recipientUserId, workflowRequestId, isApproverNotification, decision,
+                triggerNotification(recipientUserId, workflowId, workflowRequestId, isApproverNotification, decision,
                         notificationChannels);
                 return null;
             } catch (Exception e) {
@@ -542,13 +541,14 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * Triggers a notification for workflow events.
      *
      * @param approverUserId       The user ID of the notification recipient.
+     * @param workflowId           The workflow ID.
      * @param workflowRequestId     The workflow request ID.
      * @param isApproverNotification True if notifying approver about new request, false if notifying workflow initiator
      *                              about decision.
      * @param decision              The approval decision (APPROVED/REJECTED), null for initial notifications.
      * @param channel               The notification channel (e.g., email, SMS), null for default channel.
      */
-    private void triggerNotification(String approverUserId, String workflowRequestId,
+    private void triggerNotification(String approverUserId, String workflowId, String workflowRequestId,
                                      boolean isApproverNotification, String decision, String channel) {
 
         List<String> channels = parseChannels(channel);
@@ -560,8 +560,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 Map<String, Object> notificationProperties = new HashMap<>();
                 String notificationChannel = getServerSupportedNotificationChannel(ch);
                 notificationProperties.put("notification-channel", notificationChannel);
-                buildNotificationPropertiesForChannel(workflowRequestId, approverUserId, isApproverNotification,
-                        decision, ch, notificationProperties);
+                buildNotificationPropertiesForChannel(workflowId, workflowRequestId, approverUserId,
+                        isApproverNotification, decision, ch, notificationProperties);
 
                 String eventName = resolveEventName(notificationChannel);
                 if (StringUtils.isBlank(eventName)) {
@@ -584,6 +584,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     /**
      * Builds notification properties for a specific channel.
      *
+     * @param workflowId            The workflow ID.
      * @param workflowRequestId     The workflow request ID.
      * @param approverUserId       The user ID of the workflow approver.
      * @param isApproverNotification True for approver notification, false for workflow initiator notification.
@@ -592,9 +593,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param properties            The properties map to populate.
      * @throws WorkflowEngineException If property building fails.
      */
-    private void buildNotificationPropertiesForChannel(String workflowRequestId, String approverUserId,
-                                                       boolean isApproverNotification, String decision,
-                                                       String channel, Map<String, Object> properties)
+    private void buildNotificationPropertiesForChannel(String workflowId, String workflowRequestId,
+                                                       String approverUserId, boolean isApproverNotification,
+                                                       String decision, String channel, Map<String, Object> properties)
             throws WorkflowEngineException {
 
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
@@ -602,7 +603,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 getWorkflowRequestBean(workflowRequestId);
 
         if (isApproverNotification) {
-            buildApproverNotificationProperties(tenantId, approverUserId, workflowRequestId,
+            buildApproverNotificationProperties(tenantId, approverUserId, workflowId, workflowRequestId,
                     workflowRequest, channel, properties);
         } else {
             buildInitiatorNotificationProperties(tenantId, workflowRequestId,
@@ -615,19 +616,22 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      *
      * @param tenantId          The tenant ID.
      * @param approverUserId    The approver's user ID.
+     * @param workflowId        The workflow ID.
      * @param workflowRequestId The workflow request ID.
      * @param workflowRequest   The workflow request bean.
      * @param channel           The notification channel (sms or email).
      * @param properties        The properties map to populate.
      * @throws WorkflowEngineException If property building fails.
      */
-    private void buildApproverNotificationProperties(int tenantId, String approverUserId, String workflowRequestId,
+    private void buildApproverNotificationProperties(int tenantId, String approverUserId, String workflowId,
+                                                     String workflowRequestId,
                                                      org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest
                                                              workflowRequest,
                                                      String channel, Map<String, Object> properties)
             throws WorkflowEngineException {
 
-        String approvalUrl = FrameworkUtils.getMyAccountURL(null) + "/approvals";
+        String approvalUrl = FrameworkUtils.getMyAccountURL(null) + "/approvals?workflowId=" + workflowId +
+                "&workflowRequestId=" + workflowRequestId;
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
 
         // Determine the claim URI based on channel.
@@ -644,7 +648,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("send-to", approverContact);
         properties.put("tenant-domain", tenantDomain);
         properties.put("approvalActionUrl", approvalUrl);
-        properties.put("workflowId", workflowRequestId);
+        properties.put("workflowId", workflowId);
+        properties.put("workflowRequestId", workflowRequestId);
         properties.put("initiatorName", workflowRequest.getCreatedBy());
         properties.put("workflowType", workflowRequest.getOperationType());
 
@@ -825,7 +830,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("TEMPLATE_TYPE", "WorkflowInitiatorNotification");
         properties.put("send-to", initiatorContact);
         properties.put("tenant-domain", tenantDomain);
-        properties.put("workflowId", workflowRequestId);
+        properties.put("workflowRequestId", workflowRequestId);
         properties.put("workflowType", workflowRequest.getOperationType());
         // Convert decision to title case (e.g., "APPROVED" -> "Approved").
         String formattedDecision = StringUtils.isNotBlank(decision)
@@ -1083,7 +1088,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             String notificationChannels = extractWorkFlowInitiatorNotificationChannels(workflowId);
             String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
             if (StringUtils.isNotBlank(notificationChannels)) {
-                executeNotificationAsync(userId, workflowRequestId, false, APPROVED, notificationChannels);
+                executeNotificationAsync(userId, workflowId, workflowRequestId, false, APPROVED,
+                        notificationChannels);
             }
         } catch (WorkflowEngineException e) {
             log.error("Error while retrieving workflow parameters for initiator notification for workflow: {}",
@@ -1107,7 +1113,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
 
             if (StringUtils.isNotBlank(notificationChannels)) {
-                executeNotificationAsync(userId, workflowRequestId, false, REJECTED, notificationChannels);
+                executeNotificationAsync(userId, workflowId, workflowRequestId, false, REJECTED,
+                        notificationChannels);
             }
         } catch (WorkflowEngineException e) {
             log.error("Error while retrieving workflow parameters for initiator notification for workflow: {}",
