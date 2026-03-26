@@ -648,7 +648,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("send-to", approverContact);
         properties.put("tenant-domain", tenantDomain);
         properties.put("approvalActionUrl", approvalUrl);
-        properties.put("workflowId", workflowId);
         properties.put("workflowRequestId", workflowRequestId);
         properties.put("initiatorName", workflowRequest.getCreatedBy());
         properties.put("workflowType", workflowRequest.getOperationType());
