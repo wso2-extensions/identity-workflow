@@ -25,11 +25,12 @@ import org.slf4j.LoggerFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.ThreadLocalAwareExecutors;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -598,23 +599,20 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                                                        String decision, String channel, Map<String, Object> properties)
             throws WorkflowEngineException {
 
-        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest workflowRequest =
                 getWorkflowRequestBean(workflowRequestId);
 
         if (isApproverNotification) {
-            buildApproverNotificationProperties(tenantId, approverUserId, workflowId, workflowRequestId,
-                    workflowRequest, channel, properties);
+            buildApproverNotificationProperties(approverUserId, workflowId, workflowRequestId, workflowRequest,
+                    channel, properties);
         } else {
-            buildInitiatorNotificationProperties(tenantId, workflowRequestId,
-                    workflowRequest, decision, channel, properties);
+            buildInitiatorNotificationProperties(workflowRequestId, workflowRequest, decision, channel, properties);
         }
     }
 
     /**
      * Builds notification properties for approvers.
      *
-     * @param tenantId          The tenant ID.
      * @param approverUserId    The approver's user ID.
      * @param workflowId        The workflow ID.
      * @param workflowRequestId The workflow request ID.
@@ -623,16 +621,25 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param properties        The properties map to populate.
      * @throws WorkflowEngineException If property building fails.
      */
-    private void buildApproverNotificationProperties(int tenantId, String approverUserId, String workflowId,
+    private void buildApproverNotificationProperties(String approverUserId, String workflowId,
                                                      String workflowRequestId,
                                                      org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest
                                                              workflowRequest,
                                                      String channel, Map<String, Object> properties)
             throws WorkflowEngineException {
 
-        String approvalUrl = FrameworkUtils.getMyAccountURL(null) + "/approvals?workflowId=" + workflowId +
-                "&workflowRequestId=" + workflowRequestId;
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        String approvalUrl = StringUtils.EMPTY;
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+
+        try {
+            approvalUrl = ServiceURLBuilder.create().setTenant(tenantDomain, true)
+                    .addPath(new String[]{"/myaccount"}).build().getAbsolutePublicURL() + "/approvals?workflowId=" +
+                    workflowId + "&workflowRequestId=" + workflowRequestId;
+        } catch (URLBuilderException e) {
+            log.error("Error while building approval notification URL in tenant: {}. " +
+                    "WorkflowRequestId: {}", tenantId, workflowRequestId, e);
+        }
 
         // Determine the claim URI based on channel.
         String claimUri = getClaimUriForChannel(channel);
@@ -651,7 +658,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("workflowRequestId", workflowRequestId);
         properties.put("initiatorName", workflowRequest.getCreatedBy());
         properties.put("workflowType", workflowRequest.getOperationType());
-
     }
 
     @Override
@@ -804,7 +810,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     /**
      * Builds notification properties for initiators.
      *
-     * @param tenantId          The tenant ID.
      * @param workflowRequestId The workflow request ID.
      * @param workflowRequest   The workflow request bean.
      * @param decision          The approval decision.
@@ -812,7 +817,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
      * @param properties        The properties map to populate.
      * @throws WorkflowEngineException If property building fails.
      */
-    private void buildInitiatorNotificationProperties(int tenantId, String workflowRequestId,
+    private void buildInitiatorNotificationProperties(String workflowRequestId,
                                                       org.wso2.carbon.identity.workflow.mgt.bean.WorkflowRequest
                                                               workflowRequest,
                                                       String decision, String channel,
@@ -820,7 +825,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             throws WorkflowEngineException {
 
         String initiatorUsername = workflowRequest.getCreatedBy();
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
         // Determine the claim URI based on channel.
         String claimUri = getClaimUriForChannel(channel);
