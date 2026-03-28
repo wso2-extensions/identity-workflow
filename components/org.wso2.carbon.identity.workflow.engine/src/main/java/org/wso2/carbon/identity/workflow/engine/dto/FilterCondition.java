@@ -19,10 +19,8 @@
 package org.wso2.carbon.identity.workflow.engine.dto;
 
 /**
- * Represents a single filter condition for approval task queries.
- * <p>
- * A condition is a triple of (attribute, operator, value), e.g.
- * {@code workflowId eq abc-123} or {@code workflowRequestId sw req-}.
+ * Represents a single filter condition for approval task queries. A condition is a triple of
+ * (attribute, operator, value).
  */
 public class FilterCondition {
 

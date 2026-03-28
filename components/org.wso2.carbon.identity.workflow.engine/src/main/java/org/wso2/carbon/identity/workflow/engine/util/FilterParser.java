@@ -30,22 +30,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Utility class for parsing SCIM-like filter expressions into {@link FilterCondition} objects.
- *
- * <p>Supported format (case-insensitive {@code and} separator):
- * <pre>
- *   attribute op value [and attribute op value ...]
- * </pre>
- *
- * <p>Examples:
- * <ul>
- *   <li>{@code workflowId eq abc-123}</li>
- *   <li>{@code workflowRequestId sw req-}</li>
- *   <li>{@code workflowId eq abc-123 and workflowRequestId sw req-}</li>
- * </ul>
- *
- * <p>Supported attributes: {@code workflowId}, {@code workflowRequestId}.<br>
- * Supported operators: {@code eq} (equals), {@code sw} (starts with).
+ * Utility class to parse raw filter strings into structured {@link FilterCondition} objects for approval task queries.
  */
 public class FilterParser {
 

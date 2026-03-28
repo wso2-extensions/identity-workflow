@@ -96,25 +96,22 @@ public class WorkflowEngineConstants {
         public static final String GET_APPROVAL_TASK_RELATIONS_BY_REQUEST_ID = "SELECT TASK_ID, APPROVER_NAME, " +
                 "TASK_STATUS, APPROVER_TYPE FROM WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ?";
 
-        public static final String GET_FILTERED_APPROVAL_TASK_DETAILS_BASE =
-                "SELECT TASK_ID, EVENT_ID, WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID, TASK_STATUS " +
-                        "FROM WF_WORKFLOW_APPROVAL_RELATION " +
-                        "INNER JOIN WF_REQUEST ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
-                        "WHERE WF_REQUEST.TENANT_ID = :" + SQLPlaceholders.TENANT_ID_PLACEHOLDER + "; " +
-                        "AND APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ")";
+        public static final String GET_FILTERED_APPROVAL_TASK_DETAILS_BASE = "SELECT TASK_ID, EVENT_ID, " +
+                "WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION " +
+                "INNER JOIN WF_REQUEST ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID WHERE " +
+                "WF_REQUEST.TENANT_ID = :" + SQLPlaceholders.TENANT_ID_PLACEHOLDER + "; AND APPROVER_NAME IN (" +
+                SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ")";
         public static final String STATUS_FILTER_CLAUSE = " AND TASK_STATUS IN (" +
                 SQLPlaceholders.STATUS_LIST_PLACEHOLDER + ")";
         public static final String OPERATION_TYPE_FILTER_CLAUSE = " AND WF_REQUEST.OPERATION_TYPE IN (" +
                 SQLPlaceholders.OPERATION_TYPE_LIST_PLACEHOLDER + ")";
         public static final String WORKFLOW_ID_FILTER_CLAUSE = " AND WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID = :" +
                 SQLPlaceholders.FILTER_WORKFLOW_ID_PLACEHOLDER + ";";
-        public static final String WORKFLOW_ID_SW_FILTER_CLAUSE =
-                " AND WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID LIKE :" +
-                        SQLPlaceholders.FILTER_WORKFLOW_ID_PLACEHOLDER + ";";
+        public static final String WORKFLOW_ID_SW_FILTER_CLAUSE = " AND WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID " +
+                "LIKE :" + SQLPlaceholders.FILTER_WORKFLOW_ID_PLACEHOLDER + ";";
         public static final String REQUEST_ID_FILTER_CLAUSE = " AND WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = :" +
                 SQLPlaceholders.FILTER_REQUEST_ID_PLACEHOLDER + ";";
-        public static final String REQUEST_ID_SW_FILTER_CLAUSE =
-                " AND WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID LIKE :" +
+        public static final String REQUEST_ID_SW_FILTER_CLAUSE = " AND WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID LIKE :" +
                         SQLPlaceholders.FILTER_REQUEST_ID_PLACEHOLDER + ";";
         public static final String ORDER_BY_UPDATED_AT_DESC = " ORDER BY WF_REQUEST.UPDATED_AT DESC";
     }

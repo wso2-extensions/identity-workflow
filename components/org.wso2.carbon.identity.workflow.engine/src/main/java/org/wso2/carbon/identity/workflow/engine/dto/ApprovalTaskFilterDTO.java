@@ -50,12 +50,6 @@ public class ApprovalTaskFilterDTO {
         this.operationTypeList = operationTypeList;
     }
 
-    /**
-     * Returns the list of parsed filter conditions for {@code workflowId} and/or {@code workflowRequestId}.
-     * Each condition carries the attribute name, the operator ({@code eq} or {@code sw}), and the value.
-     *
-     * @return an unmodifiable list of filter conditions, never {@code null}.
-     */
     public List<FilterCondition> getFilterConditions() {
 
         return filterConditions != null ? filterConditions : Collections.emptyList();
