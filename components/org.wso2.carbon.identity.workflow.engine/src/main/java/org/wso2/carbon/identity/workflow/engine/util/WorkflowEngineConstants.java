@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -39,15 +39,11 @@ public class WorkflowEngineConstants {
     public static final int NO_CURRENT_STEP = -1;
     public static final String Q_NAME_STEP_SEPARATOR = "-";
 
-    /**
-     * Configuration constants for workflow engine.
-     */
-    public static class Configurations {
+    /** Filter attribute name for workflow ID filter conditions. */
+    public static final String FILTER_ATTRIBUTE_WORKFLOW_ID = "workflowId";
 
-        public static final String WORKFLOW_ENGINE_CONFIG_ELEMENT = "WorkflowEngine";
-        public static final String MAX_APPROVER_NOTIFICATIONS_CONFIG = "WorkflowEngine.MaxApproverNotifications";
-        public static final int DEFAULT_MAX_APPROVER_NOTIFICATIONS = 15;
-    }
+    /** Filter attribute name for workflow request ID filter conditions. */
+    public static final String FILTER_ATTRIBUTE_REQUEST_ID = "workflowRequestId";
 
     /**
      * SQL Query definitions.
@@ -87,21 +83,6 @@ public class WorkflowEngineConstants {
                 "APPROVER_NAME, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION WHERE TASK_ID = ?";
         public static final String GET_TASK_ID_FROM_REQUEST = "SELECT TASK_ID FROM WF_WORKFLOW_APPROVAL_RELATION " +
                 "WHERE EVENT_ID = ? AND WORKFLOW_ID = ?";
-        public static final String GET_APPROVAL_TASK_DETAILS_FROM_APPROVER =
-                "SELECT TASK_ID, EVENT_ID, WORKFLOW_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION INNER JOIN " +
-                        "WF_REQUEST " +
-                        "ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
-                        "WHERE WF_REQUEST.TENANT_ID = :" + SQLPlaceholders.TENANT_ID_PLACEHOLDER + "; AND " +
-                        "APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") " +
-                        "ORDER BY WF_REQUEST.UPDATED_AT DESC";
-        public static final String GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES =
-                "SELECT TASK_ID, EVENT_ID, WORKFLOW_ID, TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION INNER " +
-                        "JOIN WF_REQUEST " +
-                        "ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
-                        "WHERE WF_REQUEST.TENANT_ID = :" + SQLPlaceholders.TENANT_ID_PLACEHOLDER + "; AND " +
-                        "APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ") AND " +
-                        "TASK_STATUS IN (" + SQLPlaceholders.STATUS_LIST_PLACEHOLDER + ") " +
-                        "ORDER BY WF_REQUEST.UPDATED_AT DESC";
         public static final String GET_TASK_STATUS = "SELECT DISTINCT TASK_STATUS FROM WF_WORKFLOW_APPROVAL_RELATION " +
                 "WHERE TASK_ID = ?";
         public static final String GET_CREATED_USER = "SELECT CREATED_BY FROM WF_REQUEST WHERE UUID= ?";
@@ -114,6 +95,28 @@ public class WorkflowEngineConstants {
                 "WF_WORKFLOW_REQUEST_RELATION WHERE WORKFLOW_ID = ? AND STATUS = 'PENDING'";
         public static final String GET_APPROVAL_TASK_RELATIONS_BY_REQUEST_ID = "SELECT TASK_ID, APPROVER_NAME, " +
                 "TASK_STATUS, APPROVER_TYPE FROM WF_WORKFLOW_APPROVAL_RELATION WHERE EVENT_ID = ?";
+
+        public static final String GET_FILTERED_APPROVAL_TASK_DETAILS_BASE =
+                "SELECT TASK_ID, EVENT_ID, WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID, TASK_STATUS " +
+                        "FROM WF_WORKFLOW_APPROVAL_RELATION " +
+                        "INNER JOIN WF_REQUEST ON WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = WF_REQUEST.UUID " +
+                        "WHERE WF_REQUEST.TENANT_ID = :" + SQLPlaceholders.TENANT_ID_PLACEHOLDER + "; " +
+                        "AND APPROVER_NAME IN (" + SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER + ")";
+        public static final String STATUS_FILTER_CLAUSE = " AND TASK_STATUS IN (" +
+                SQLPlaceholders.STATUS_LIST_PLACEHOLDER + ")";
+        public static final String OPERATION_TYPE_FILTER_CLAUSE = " AND WF_REQUEST.OPERATION_TYPE IN (" +
+                SQLPlaceholders.OPERATION_TYPE_LIST_PLACEHOLDER + ")";
+        public static final String WORKFLOW_ID_FILTER_CLAUSE = " AND WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID = :" +
+                SQLPlaceholders.FILTER_WORKFLOW_ID_PLACEHOLDER + ";";
+        public static final String WORKFLOW_ID_SW_FILTER_CLAUSE =
+                " AND WF_WORKFLOW_APPROVAL_RELATION.WORKFLOW_ID LIKE :" +
+                        SQLPlaceholders.FILTER_WORKFLOW_ID_PLACEHOLDER + ";";
+        public static final String REQUEST_ID_FILTER_CLAUSE = " AND WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID = :" +
+                SQLPlaceholders.FILTER_REQUEST_ID_PLACEHOLDER + ";";
+        public static final String REQUEST_ID_SW_FILTER_CLAUSE =
+                " AND WF_WORKFLOW_APPROVAL_RELATION.EVENT_ID LIKE :" +
+                        SQLPlaceholders.FILTER_REQUEST_ID_PLACEHOLDER + ";";
+        public static final String ORDER_BY_UPDATED_AT_DESC = " ORDER BY WF_REQUEST.UPDATED_AT DESC";
     }
 
     /**
@@ -126,6 +129,10 @@ public class WorkflowEngineConstants {
         public static final String STATUS_LIST_PLACEHOLDER = "_STATUS_LIST_";
         public static final String STATUS_PLACEHOLDER_PREFIX = "STATUS_";
         public static final String TENANT_ID_PLACEHOLDER = "TENANT_ID";
+        public static final String OPERATION_TYPE_LIST_PLACEHOLDER = "_OPERATION_TYPE_LIST_";
+        public static final String OPERATION_TYPE_PLACEHOLDER_PREFIX = "OPERATION_TYPE_";
+        public static final String FILTER_WORKFLOW_ID_PLACEHOLDER = "FILTER_WORKFLOW_ID";
+        public static final String FILTER_REQUEST_ID_PLACEHOLDER = "FILTER_REQUEST_ID";
     }
 
     /**
@@ -201,6 +208,7 @@ public class WorkflowEngineConstants {
         USER_ERROR_APPROVAL_TASK_IS_NOT_ASSIGNED("WFE_40006", "Approval task is not assigned to the " +
                 "user."),
         USER_ERROR_TASK_ALREADY_COMPLETED("WFE_40007", "Task is already completed."),
+        INVALID_FILTER_EXPRESSION("WFE_40008", "Invalid filter expression."),
 
         /*
          Error messages for server errors - 500 series

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -24,9 +24,12 @@ import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.NamedJdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.util.JdbcUtils;
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskFilterDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskRelationDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
+import org.wso2.carbon.identity.workflow.engine.dto.FilterCondition;
+import org.wso2.carbon.identity.workflow.engine.dto.FilterOperator;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineServerException;
 import org.wso2.carbon.identity.workflow.engine.internal.dao.ApprovalTaskDAO;
 import org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants;
@@ -40,11 +43,14 @@ import java.util.stream.IntStream;
 
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.ENTITY_ID_LIST_PLACEHOLDER;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.ENTITY_ID_PLACEHOLDER_PREFIX;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.FILTER_REQUEST_ID_PLACEHOLDER;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.FILTER_WORKFLOW_ID_PLACEHOLDER;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.OPERATION_TYPE_LIST_PLACEHOLDER;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.OPERATION_TYPE_PLACEHOLDER_PREFIX;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.STATUS_LIST_PLACEHOLDER;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.STATUS_PLACEHOLDER_PREFIX;
 import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SQLPlaceholders.TENANT_ID_PLACEHOLDER;
-import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SqlQueries.GET_APPROVAL_TASK_DETAILS_FROM_APPROVER;
-import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SqlQueries.GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES;
+import static org.wso2.carbon.identity.workflow.engine.util.WorkflowEngineConstants.SqlQueries.GET_FILTERED_APPROVAL_TASK_DETAILS_BASE;
 
 /**
  * Workflow Event Request DAO implementation.
@@ -305,37 +311,111 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
         return requestId;
     }
 
-    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset,
-                                                                   int tenantId)
+    @Override
+    public List<ApprovalTaskSummaryDTO> getFilteredApprovalTaskDetails(List<String> entityIds,
+                                                                       ApprovalTaskFilterDTO filter, int limit,
+                                                                       int offset, int tenantId)
             throws WorkflowEngineServerException {
 
         if (entityIds == null || entityIds.isEmpty()) {
             return Collections.emptyList();
         }
 
-        String placeholders = IntStream.range(0, entityIds.size())
-                .mapToObj(i -> ":" + ENTITY_ID_PLACEHOLDER_PREFIX + i + ";")
-                .collect(Collectors.joining(", "));
-        String sqlStmt = GET_APPROVAL_TASK_DETAILS_FROM_APPROVER.replace(ENTITY_ID_LIST_PLACEHOLDER, placeholders);
-
         NamedJdbcTemplate namedJdbcTemplate = JdbcUtils.getNewNamedJdbcTemplate();
+
         try {
-            return namedJdbcTemplate.executeQuery(sqlStmt, (resultSet, rowNumber) -> {
-                        ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
-                        approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
-                        approvalTaskSummaryDTO.setRequestId(resultSet.getString(WorkflowEngineConstants.EVENT_ID));
-                        approvalTaskSummaryDTO.setWorkflowId(resultSet.getString(WorkflowEngineConstants.WORKFLOW_ID));
-                        approvalTaskSummaryDTO
-                                .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
-                        return approvalTaskSummaryDTO;
-                    }, namedPreparedStatement -> {
-                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER, tenantId);
-                        for (int i = 0; i < entityIds.size(); i++) {
-                            namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
-                        }
-                    });
+            String entityIdPlaceholders = IntStream.range(0, entityIds.size())
+                    .mapToObj(i -> ":" + ENTITY_ID_PLACEHOLDER_PREFIX + i + ";")
+                    .collect(Collectors.joining(", "));
+
+            StringBuilder sqlBuilder = new StringBuilder(
+                    GET_FILTERED_APPROVAL_TASK_DETAILS_BASE.replace(ENTITY_ID_LIST_PLACEHOLDER,
+                            entityIdPlaceholders));
+
+            List<String> statusList = filter != null ? filter.getStatusList() : null;
+            if (statusList != null && !statusList.isEmpty()) {
+                String statusPlaceholders = IntStream.range(0, statusList.size())
+                        .mapToObj(i -> ":" + STATUS_PLACEHOLDER_PREFIX + i + ";")
+                        .collect(Collectors.joining(", "));
+                sqlBuilder.append(
+                        WorkflowEngineConstants.SqlQueries.STATUS_FILTER_CLAUSE.replace(
+                                STATUS_LIST_PLACEHOLDER, statusPlaceholders));
+            }
+
+            List<String> operationTypes = filter != null ? filter.getOperationTypeList() : null;
+            if (operationTypes != null && !operationTypes.isEmpty()) {
+                String operationTypePlaceholders = IntStream.range(0, operationTypes.size())
+                        .mapToObj(i -> ":" + OPERATION_TYPE_PLACEHOLDER_PREFIX + i + ";")
+                        .collect(Collectors.joining(", "));
+                sqlBuilder.append(
+                        WorkflowEngineConstants.SqlQueries.OPERATION_TYPE_FILTER_CLAUSE.replace(
+                                OPERATION_TYPE_LIST_PLACEHOLDER, operationTypePlaceholders));
+            }
+
+            List<FilterCondition> filterConditions = filter != null ? filter.getFilterConditions() : null;
+            FilterCondition workflowIdCondition = findFilterCondition(filterConditions,
+                    WorkflowEngineConstants.FILTER_ATTRIBUTE_WORKFLOW_ID);
+            FilterCondition requestIdCondition = findFilterCondition(filterConditions,
+                    WorkflowEngineConstants.FILTER_ATTRIBUTE_REQUEST_ID);
+
+            if (workflowIdCondition != null) {
+                if (workflowIdCondition.getOperator() == FilterOperator.SW) {
+                    sqlBuilder.append(WorkflowEngineConstants.SqlQueries.WORKFLOW_ID_SW_FILTER_CLAUSE);
+                } else {
+                    sqlBuilder.append(WorkflowEngineConstants.SqlQueries.WORKFLOW_ID_FILTER_CLAUSE);
+                }
+            }
+
+            if (requestIdCondition != null) {
+                if (requestIdCondition.getOperator() == FilterOperator.SW) {
+                    sqlBuilder.append(WorkflowEngineConstants.SqlQueries.REQUEST_ID_SW_FILTER_CLAUSE);
+                } else {
+                    sqlBuilder.append(WorkflowEngineConstants.SqlQueries.REQUEST_ID_FILTER_CLAUSE);
+                }
+            }
+
+            sqlBuilder.append(WorkflowEngineConstants.SqlQueries.ORDER_BY_UPDATED_AT_DESC);
+
+            return namedJdbcTemplate.executeQuery(sqlBuilder.toString(), (resultSet, rowNumber) -> {
+                ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
+                approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
+                approvalTaskSummaryDTO.setRequestId(resultSet.getString(WorkflowEngineConstants.EVENT_ID));
+                approvalTaskSummaryDTO.setWorkflowId(
+                        resultSet.getString(WorkflowEngineConstants.WORKFLOW_ID));
+                approvalTaskSummaryDTO
+                        .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
+                return approvalTaskSummaryDTO;
+            }, namedPreparedStatement -> {
+                namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER, tenantId);
+                for (int i = 0; i < entityIds.size(); i++) {
+                    namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
+                }
+                if (statusList != null && !statusList.isEmpty()) {
+                    for (int i = 0; i < statusList.size(); i++) {
+                        namedPreparedStatement.setString(STATUS_PLACEHOLDER_PREFIX + i, statusList.get(i));
+                    }
+                }
+                if (operationTypes != null && !operationTypes.isEmpty()) {
+                    for (int i = 0; i < operationTypes.size(); i++) {
+                        namedPreparedStatement.setString(OPERATION_TYPE_PLACEHOLDER_PREFIX + i,
+                                operationTypes.get(i));
+                    }
+                }
+                if (workflowIdCondition != null) {
+                    String value = workflowIdCondition.getOperator() == FilterOperator.SW
+                            ? workflowIdCondition.getValue() + "%"
+                            : workflowIdCondition.getValue();
+                    namedPreparedStatement.setString(FILTER_WORKFLOW_ID_PLACEHOLDER, value);
+                }
+                if (requestIdCondition != null) {
+                    String value = requestIdCondition.getOperator() == FilterOperator.SW
+                            ? requestIdCondition.getValue() + "%"
+                            : requestIdCondition.getValue();
+                    namedPreparedStatement.setString(FILTER_REQUEST_ID_PLACEHOLDER, value);
+                }
+            });
         } catch (DataAccessException e) {
-            String errorMessage = "Error occurred while retrieving task IDs from entity IDs: " +
+            String errorMessage = "Error occurred while retrieving filtered approval task details for entity IDs: " +
                     String.join(", ", entityIds);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
@@ -344,55 +424,21 @@ public class ApprovalTaskDAOImpl implements ApprovalTaskDAO {
         }
     }
 
+    /**
+     * Returns the first {@link FilterCondition} in {@code conditions} whose attribute matches
+     * {@code attribute}, or {@code null} if none is found.
+     */
+    private FilterCondition findFilterCondition(List<FilterCondition> conditions, String attribute) {
 
-    public List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(List<String> entityIds,
-                                                                           List<String> statusList, int limit,
-                                                                           int offset, int tenantId)
-            throws WorkflowEngineServerException {
-
-        if (entityIds == null || entityIds.isEmpty()) {
-            return Collections.emptyList();
+        if (conditions == null) {
+            return null;
         }
-
-        NamedJdbcTemplate namedJdbcTemplate = JdbcUtils.getNewNamedJdbcTemplate();
-
-        try {
-            String placeholders = IntStream.range(0, entityIds.size())
-                    .mapToObj(i -> ":" + ENTITY_ID_PLACEHOLDER_PREFIX + i + ";")
-                    .collect(Collectors.joining(", "));
-            String sqlStmt = GET_APPROVER_TASK_DETAILS_FROM_APPROVER_AND_TYPE_AND_STATUSES
-                    .replace(ENTITY_ID_LIST_PLACEHOLDER, placeholders);
-
-            placeholders = IntStream.range(0, statusList.size())
-                    .mapToObj(i -> ":" + STATUS_PLACEHOLDER_PREFIX + i + ";")
-                    .collect(Collectors.joining(", "));
-            sqlStmt = sqlStmt.replace(STATUS_LIST_PLACEHOLDER, placeholders);
-
-            return namedJdbcTemplate.executeQuery(sqlStmt, (resultSet, rowNumber) -> {
-                        ApprovalTaskSummaryDTO approvalTaskSummaryDTO = new ApprovalTaskSummaryDTO();
-                        approvalTaskSummaryDTO.setId(resultSet.getString(WorkflowEngineConstants.TASK_ID_COLUMN));
-                        approvalTaskSummaryDTO.setRequestId(resultSet.getString(WorkflowEngineConstants.EVENT_ID));
-                        approvalTaskSummaryDTO.setWorkflowId(resultSet.getString(WorkflowEngineConstants.WORKFLOW_ID));
-                        approvalTaskSummaryDTO
-                                .setApprovalStatus(resultSet.getString(WorkflowEngineConstants.TASK_STATUS_COLUMN));
-                        return approvalTaskSummaryDTO;
-                    }, namedPreparedStatement -> {
-                        namedPreparedStatement.setInt(TENANT_ID_PLACEHOLDER, tenantId);
-                        for (int i = 0; i < entityIds.size(); i++) {
-                            namedPreparedStatement.setString(ENTITY_ID_PLACEHOLDER_PREFIX + i, entityIds.get(i));
-                        }
-                        for (int i = 0; i < statusList.size(); i++) {
-                            namedPreparedStatement.setString(STATUS_PLACEHOLDER_PREFIX + i, statusList.get(i));
-                        }
-                    });
-        } catch (DataAccessException e) {
-            String errorMessage = String.format("Error occurred while retrieving task id from entity IDs: %s " +
-                    "and status list: %s", String.join(", ", entityIds), String.join(", ", statusList));
-            if (log.isDebugEnabled()) {
-                log.debug(errorMessage, e);
+        for (FilterCondition condition : conditions) {
+            if (attribute.equals(condition.getAttribute())) {
+                return condition;
             }
-            throw new WorkflowEngineServerException(errorMessage, e);
         }
+        return null;
     }
 
     /**
