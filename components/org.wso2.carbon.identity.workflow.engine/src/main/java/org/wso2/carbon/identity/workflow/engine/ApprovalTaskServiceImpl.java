@@ -747,19 +747,19 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
                 .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
-                        .equals(approvalTask.getApprovalStatus())).map(ApprovalTaskSummaryDTO::getRequestId)
+                        .equals(approvalTask.getApprovalStatus()))
+                .map(approvalTask -> approvalTask.getRequestId() + ":" + approvalTask.getWorkflowId())
                 .collect(Collectors.toList());
         Set<String> processedRequestIds = new HashSet<>();
         Iterator<ApprovalTaskSummaryDTO> iterator = approvalTaskSummaryDTOS.iterator();
         while (iterator.hasNext()) {
             ApprovalTaskSummaryDTO approvalTaskSummaryDTO = iterator.next();
-            String uniqueKey = approvalTaskSummaryDTO.getRequestId() + approvalTaskSummaryDTO.getWorkflowId();
+            String uniqueKey = approvalTaskSummaryDTO.getRequestId() + ":" + approvalTaskSummaryDTO.getWorkflowId();
             if (processedRequestIds.contains(uniqueKey)) {
                 iterator.remove();
                 continue;
             }
-            if (reservedWorkflowRequests.contains(approvalTaskSummaryDTO.getRequestId()) &&
-                    WorkflowEngineConstants.TaskStatus.BLOCKED.name()
+            if (reservedWorkflowRequests.contains(uniqueKey) && WorkflowEngineConstants.TaskStatus.BLOCKED.name()
                             .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
                 iterator.remove();
                 continue;
