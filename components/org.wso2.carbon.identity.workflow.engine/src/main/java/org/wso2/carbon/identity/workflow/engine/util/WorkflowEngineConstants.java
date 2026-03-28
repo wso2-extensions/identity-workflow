@@ -38,11 +38,7 @@ public class WorkflowEngineConstants {
     public static final String REQUEST_ID_COLUMN = "REQUEST_ID";
     public static final int NO_CURRENT_STEP = -1;
     public static final String Q_NAME_STEP_SEPARATOR = "-";
-
-    /** Filter attribute name for workflow ID filter conditions. */
     public static final String FILTER_ATTRIBUTE_WORKFLOW_ID = "workflowId";
-
-    /** Filter attribute name for workflow request ID filter conditions. */
     public static final String FILTER_ATTRIBUTE_REQUEST_ID = "workflowRequestId";
 
     /**
