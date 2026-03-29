@@ -178,7 +178,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             }
 
             WorkflowRequest request = getWorkflowRequest(approvalTaskSummaryDTO.getRequestId());
+            
             String eventType = request.getEventType();
+
             String workflowID = approvalTaskSummaryDTO.getWorkflowId();
             String workflowAssociationName = findAssociationNameByWorkflowAndEvent(workflowID, eventType);
 
