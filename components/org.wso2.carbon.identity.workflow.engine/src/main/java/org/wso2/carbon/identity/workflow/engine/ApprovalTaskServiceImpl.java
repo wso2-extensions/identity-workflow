@@ -145,7 +145,42 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasksWithFilter(filter, userId, limit,
                 offset);
-        enrichAndFilterApprovalTasks(approvalTaskSummaryDTOS);
+
+        List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
+                .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
+                        .equals(approvalTask.getApprovalStatus()))
+                .map(approvalTask -> approvalTask.getRequestId() + ":" + approvalTask.getWorkflowId())
+                .collect(Collectors.toList());
+        Set<String> processedRequestIds = new HashSet<>();
+        Iterator<ApprovalTaskSummaryDTO> iterator = approvalTaskSummaryDTOS.iterator();
+        while (iterator.hasNext()) {
+            ApprovalTaskSummaryDTO approvalTaskSummaryDTO = iterator.next();
+            String uniqueKey = approvalTaskSummaryDTO.getRequestId() + ":" + approvalTaskSummaryDTO.getWorkflowId();
+            if (processedRequestIds.contains(uniqueKey)) {
+                iterator.remove();
+                continue;
+            }
+            if (reservedWorkflowRequests.contains(uniqueKey) && WorkflowEngineConstants.TaskStatus.BLOCKED.name()
+                    .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
+                iterator.remove();
+                continue;
+            }
+            if (!WorkflowEngineConstants.TaskStatus.APPROVED.name()
+                    .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
+                processedRequestIds.add(uniqueKey);
+            }
+
+            WorkflowRequest request = getWorkflowRequest(approvalTaskSummaryDTO.getRequestId());
+            String eventType = request.getEventType();
+            String workflowID = approvalTaskSummaryDTO.getWorkflowId();
+            String workflowAssociationName = findAssociationNameByWorkflowAndEvent(workflowID, eventType);
+
+            Timestamp createdTime = workflowRequestDAO.getCreatedAtTimeInMill(request.getUuid());
+            approvalTaskSummaryDTO.setName(workflowAssociationName);
+            approvalTaskSummaryDTO.setTaskType(eventType);
+            approvalTaskSummaryDTO.setCreatedTimeInMillis(String.valueOf(createdTime.getTime()));
+            approvalTaskSummaryDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
+        }
 
         return approvalTaskSummaryDTOS.subList(Math.min(offset, approvalTaskSummaryDTOS.size()),
                 Math.min(offset + limit, approvalTaskSummaryDTOS.size()));
@@ -734,54 +769,6 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         entityIds.addAll(roleIds);
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         return approvalTaskDAO.getFilteredApprovalTaskDetails(entityIds, filter, limit, offset, tenantId);
-    }
-
-    /**
-     * Enriches approval task summaries with metadata and filters out duplicate/blocked tasks.
-     *
-     * @param approvalTaskSummaryDTOS The list of approval task summaries to enrich and filter (modified in-place).
-     * @throws WorkflowEngineException if an error occurs while enriching the tasks.
-     */
-    private void enrichAndFilterApprovalTasks(List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS)
-            throws WorkflowEngineException {
-
-        List<String> reservedWorkflowRequests = approvalTaskSummaryDTOS.stream()
-                .filter(approvalTask -> WorkflowEngineConstants.TaskStatus.RESERVED.name()
-                        .equals(approvalTask.getApprovalStatus()))
-                .map(approvalTask -> approvalTask.getRequestId() + ":" + approvalTask.getWorkflowId())
-                .collect(Collectors.toList());
-        Set<String> processedRequestIds = new HashSet<>();
-        Iterator<ApprovalTaskSummaryDTO> iterator = approvalTaskSummaryDTOS.iterator();
-        while (iterator.hasNext()) {
-            ApprovalTaskSummaryDTO approvalTaskSummaryDTO = iterator.next();
-            String uniqueKey = approvalTaskSummaryDTO.getRequestId() + ":" + approvalTaskSummaryDTO.getWorkflowId();
-            if (processedRequestIds.contains(uniqueKey)) {
-                iterator.remove();
-                continue;
-            }
-            if (reservedWorkflowRequests.contains(uniqueKey) && WorkflowEngineConstants.TaskStatus.BLOCKED.name()
-                            .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
-                iterator.remove();
-                continue;
-            }
-            if (!WorkflowEngineConstants.TaskStatus.APPROVED.name()
-                    .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
-                processedRequestIds.add(uniqueKey);
-            }
-
-            WorkflowRequest request = getWorkflowRequest(approvalTaskSummaryDTO.getRequestId());
-            String eventType = request.getEventType();
-            String workflowID = approvalTaskDAO.getWorkflowID(approvalTaskSummaryDTO.getId());
-            String workflowAssociationName = findAssociationNameByWorkflowAndEvent(workflowID, eventType);
-
-            Timestamp createdTime = workflowRequestDAO.getCreatedAtTimeInMill(request.getUuid());
-            approvalTaskSummaryDTO.setId(approvalTaskSummaryDTO.getId());
-            approvalTaskSummaryDTO.setName(workflowAssociationName);
-            approvalTaskSummaryDTO.setTaskType(eventType);
-            approvalTaskSummaryDTO.setCreatedTimeInMillis(String.valueOf(createdTime.getTime()));
-            approvalTaskSummaryDTO.setPriority(WorkflowEngineConstants.ParameterName.PRIORITY);
-            approvalTaskSummaryDTO.setApprovalStatus(approvalTaskSummaryDTO.getApprovalStatus());
-        }
     }
 
     private List<String> getAssignedRoleIds(String userId, String tenantDomain) throws WorkflowEngineException {
