@@ -143,6 +143,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
 
+        // Filter the reserved workflow requests to filter out the BLOCKED tasks corresponding to the same request.
         List<ApprovalTaskSummaryDTO> approvalTaskSummaryDTOS = getAllAssignedTasksWithFilter(filter, userId, limit,
                 offset);
 
@@ -160,11 +161,17 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                 iterator.remove();
                 continue;
             }
+
+            /* The tasks with BLOCKED state where the corresponding workflow request already has a RESERVED task should
+               be skipped to avoid duplication in the list. */
             if (reservedWorkflowRequests.contains(uniqueKey) && WorkflowEngineConstants.TaskStatus.BLOCKED.name()
                     .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
                 iterator.remove();
                 continue;
             }
+
+            /* If the task is in APPROVED state, skip adding it to the processedRequestIds set as there can be tasks in
+               READY / RESERVED state for the same workflow request when it is a multistep approval process. */
             if (!WorkflowEngineConstants.TaskStatus.APPROVED.name()
                     .equals(approvalTaskSummaryDTO.getApprovalStatus())) {
                 processedRequestIds.add(uniqueKey);
@@ -757,6 +764,15 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
+    /**
+     * Retrieves all the approval tasks assigned to the user.
+     *
+     * @param filter   The filter criteria to apply when retrieving the approval tasks.
+     * @param userId The ID of the user whose related task IDs should be retrieved.
+     * @param limit    The maximum number of task IDs to return.
+     * @param offset   The starting point from which to return task IDs.
+     * @return List of task IDs assigned to the user, filtered by the specified statuses.
+     */
     private List<ApprovalTaskSummaryDTO> getAllAssignedTasksWithFilter(ApprovalTaskFilterDTO filter, String userId,
                                                                        int limit, int offset)
             throws WorkflowEngineException {
