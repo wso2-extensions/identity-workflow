@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.workflow.engine.internal.dao;
 
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskFilterDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskRelationDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApproverDTO;
@@ -114,31 +115,18 @@ public interface ApprovalTaskDAO {
     String getWorkflowRequestIdByApprovalTaskId(String approvalTaskId) throws WorkflowEngineServerException;
 
     /**
-     * Returns the approval task details given the approver type and name.
+     * Returns the filtered approval task details based on the provided filter criteria.
      *
-     * @param entityIds list of entity IDs.
-     * @param limit maximum number of results to return.
-     * @param offset offset for pagination.
-     * @param tenantId tenant ID.
-     * @return events list.
+     * @param entityIds List of entity IDs (user ID and role IDs).
+     * @param filter    Filter criteria for approval tasks.
+     * @param limit     Maximum number of results to return.
+     * @param offset    Offset for pagination.
+     * @param tenantId  Tenant ID.
+     * @return List of approval task summary DTOs.
      * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
      */
-    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsList(List<String> entityIds, int limit, int offset, int tenantId)
-            throws WorkflowEngineServerException;
-
-    /**
-     * Returns the approval task details given the approver type and status.
-     *
-     * @param entityIds   List of entity IDs.
-     * @param statusList  List of request statuses.
-     * @param limit       Maximum number of results to return.
-     * @param offset      Offset for pagination.
-     * @param tenantId    Tenant ID.
-     * @return            List of approval task summary DTOs.
-     * @throws WorkflowEngineServerException if an error occurs while retrieving the approval task details.
-     */
-    List<ApprovalTaskSummaryDTO> getApprovalTaskDetailsListByStatus(List<String> entityIds, List<String> statusList,
-                                                                    int limit, int offset, int tenantId)
+    List<ApprovalTaskSummaryDTO> getFilteredApprovalTaskDetails(List<String> entityIds, ApprovalTaskFilterDTO filter,
+                                                                int limit, int offset, int tenantId)
             throws WorkflowEngineServerException;
 
     /**

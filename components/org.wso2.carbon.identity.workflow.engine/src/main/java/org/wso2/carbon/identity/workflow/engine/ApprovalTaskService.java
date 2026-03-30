@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.workflow.engine;
 
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskDTO;
+import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskFilterDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.ApprovalTaskSummaryDTO;
 import org.wso2.carbon.identity.workflow.engine.dto.StateDTO;
 import org.wso2.carbon.identity.workflow.engine.exception.WorkflowEngineException;
@@ -34,14 +35,15 @@ import java.util.List;
 public interface ApprovalTaskService {
 
     /**
-     * Search available approval tasks for the current authenticated user.
+     * Search available approval tasks for the current authenticated user with advanced filtering.
      *
      * @param limit  number of records to be returned.
      * @param offset start page.
-     * @param status state of the tasks [RESERVED, READY or COMPLETED].
+     * @param filter filter criteria for approval tasks including status, operation types, workflow ID,
+     *               and request ID.
      * @return ApprovalTaskSummaryDTO list.
      */
-    List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, List<String> status)
+    List<ApprovalTaskSummaryDTO> listApprovalTasks(Integer limit, Integer offset, ApprovalTaskFilterDTO filter)
             throws WorkflowEngineException;
 
     /**
