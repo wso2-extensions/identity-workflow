@@ -635,8 +635,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
-        String approvalUrl = getMyAccountAccessUrl() + "/approvals?workflowId=" + workflowId + "&workflowRequestId=" +
-                workflowRequestId;
+        String approvalUrl = getMyAccountAccessUrl() + "/approvals";
 
         // Determine the claim URI based on channel.
         String claimUri = getClaimUriForChannel(channel);
