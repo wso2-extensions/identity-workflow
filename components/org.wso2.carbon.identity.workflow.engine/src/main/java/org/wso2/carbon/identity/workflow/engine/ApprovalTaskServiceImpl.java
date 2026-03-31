@@ -25,12 +25,14 @@ import org.slf4j.LoggerFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
-import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.ThreadLocalAwareExecutors;
-import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -630,18 +632,10 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                                                      String channel, Map<String, Object> properties)
             throws WorkflowEngineException {
 
-        String approvalUrl = StringUtils.EMPTY;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
 
-        try {
-            approvalUrl = ServiceURLBuilder.create().setTenant(tenantDomain, true)
-                    .addPath(new String[]{"/myaccount"}).build().getAbsolutePublicURL() + "/approvals?workflowId=" +
-                    workflowId + "&workflowRequestId=" + workflowRequestId;
-        } catch (URLBuilderException e) {
-            log.error("Error while building approval notification URL in tenant: {}. " +
-                    "WorkflowRequestId: {}", tenantId, workflowRequestId, e);
-        }
+        String approvalUrl = getMyAccountAccessUrl() + "/approvals";
 
         // Determine the claim URI based on channel.
         String claimUri = getClaimUriForChannel(channel);
@@ -1333,6 +1327,23 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         } catch (WorkflowEngineException e) {
             throw new WorkflowEngineServerException(
                     WorkflowEngineConstants.ErrorMessages.ERROR_RETRIEVING_ASSOCIATED_USER_ID.getDescription(), e);
+        }
+    }
+
+    private String getMyAccountAccessUrl() throws WorkflowEngineException {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        try {
+            ApplicationBasicInfo appInfo = WorkflowEngineServiceDataHolder.getInstance()
+                    .getApplicationManagementService()
+                    .getApplicationBasicInfoByName(ApplicationConstants.MY_ACCOUNT_APPLICATION_NAME, tenantDomain);
+            if (appInfo != null && StringUtils.isNotEmpty(appInfo.getAccessUrl())) {
+                return appInfo.getAccessUrl();
+            }
+            return ApplicationMgtUtil.getMyAccountAccessUrlFromServerConfig(tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new WorkflowEngineException("Error while retrieving My Account application info for tenant: " +
+                    tenantDomain, e);
         }
     }
 }

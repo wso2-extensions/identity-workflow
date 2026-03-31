@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.workflow.engine.internal;
 
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.workflow.mgt.WorkflowManagementService;
@@ -38,6 +39,7 @@ public class WorkflowEngineServiceDataHolder {
     private RoleManagementService roleManagementService;
     private RealmService realmService;
     private IdentityEventService identityEventService;
+    private ApplicationManagementService applicationManagementService;
 
     private WorkflowEngineServiceDataHolder() {
 
@@ -93,5 +95,15 @@ public class WorkflowEngineServiceDataHolder {
     public void setIdentityEventService(IdentityEventService identityEventService) {
 
         this.identityEventService = identityEventService;
+    }
+
+    public ApplicationManagementService getApplicationManagementService() {
+
+        return applicationManagementService;
+    }
+
+    public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        this.applicationManagementService = applicationManagementService;
     }
 }

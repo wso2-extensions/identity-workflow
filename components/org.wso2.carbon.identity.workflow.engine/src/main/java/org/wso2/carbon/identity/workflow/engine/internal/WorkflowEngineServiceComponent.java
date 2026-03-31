@@ -25,6 +25,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.workflow.engine.ApprovalTaskServiceImpl;
@@ -146,5 +147,22 @@ public class WorkflowEngineServiceComponent {
     protected void unsetRealmService(RealmService realmService) {
 
         WorkflowEngineServiceDataHolder.getInstance().setRealmService(null);
+    }
+
+    @Reference(
+            name = "ApplicationManagementService",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationManagementService")
+    protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        WorkflowEngineServiceDataHolder.getInstance()
+                .setApplicationManagementService(applicationManagementService);
+    }
+
+    protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        WorkflowEngineServiceDataHolder.getInstance().setApplicationManagementService(null);
     }
 }
