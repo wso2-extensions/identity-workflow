@@ -1337,8 +1337,10 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             ApplicationBasicInfo appInfo = WorkflowEngineServiceDataHolder.getInstance()
                     .getApplicationManagementService()
                     .getApplicationBasicInfoByName(ApplicationConstants.MY_ACCOUNT_APPLICATION_NAME, tenantDomain);
-            return (appInfo != null) ? appInfo.getAccessUrl() :
-                    ApplicationMgtUtil.getMyAccountAccessUrlFromServerConfig(tenantDomain);
+            if (appInfo != null && StringUtils.isNotEmpty(appInfo.getAccessUrl())) {
+                return appInfo.getAccessUrl();
+            }
+            return ApplicationMgtUtil.getMyAccountAccessUrlFromServerConfig(tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             throw new WorkflowEngineException("Error while retrieving My Account application info for tenant: " +
                     tenantDomain, e);
