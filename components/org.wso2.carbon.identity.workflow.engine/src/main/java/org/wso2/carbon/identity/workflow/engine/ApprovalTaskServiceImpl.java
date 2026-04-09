@@ -653,7 +653,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("approvalActionUrl", approvalUrl);
         properties.put("workflowRequestId", workflowRequestId);
         properties.put("initiatorName", workflowRequest.getCreatedBy());
-        properties.put("workflowType", workflowRequest.getOperationType());
+        properties.put("workflowType", processOperationType(workflowRequest.getOperationType()));
     }
 
     @Override
@@ -831,13 +831,35 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         properties.put("send-to", initiatorContact);
         properties.put("tenant-domain", tenantDomain);
         properties.put("workflowRequestId", workflowRequestId);
-        properties.put("workflowType", workflowRequest.getOperationType());
+        properties.put("workflowType", processOperationType(workflowRequest.getOperationType()));
         // Convert decision to title case (e.g., "APPROVED" -> "Approved").
         String formattedDecision = StringUtils.isNotBlank(decision)
                 ? decision.substring(0, 1).toUpperCase() + decision.substring(1).toLowerCase()
                 : decision;
         properties.put("decision", formattedDecision);
         properties.put("initiatorName", initiatorUsername);
+    }
+
+    private String processOperationType(String operationType) {
+
+        if (StringUtils.isBlank(operationType)) {
+            return StringUtils.EMPTY;
+        }
+
+        switch (operationType.trim().toUpperCase()) {
+            case "ADD_USER":
+                return "Add User";
+            case "DELETE_USER":
+                return "Remove User";
+            case "ADD_ROLE":
+                return "Create Role";
+            case "UPDATE_ROLES_OF_USERS":
+                return "Add or Remove Users from Role";
+            case "SELF_REGISTER_USER":
+                return "Self Register User";
+            default:
+                return operationType;
+        }
     }
 
     private WorkflowRequest getWorkflowRequest(String requestId) throws WorkflowEngineException {
