@@ -74,6 +74,8 @@ import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
 import org.wso2.carbon.identity.workflow.mgt.util.WorkflowDataType;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.Group;
+import org.wso2.carbon.user.core.common.User;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -487,6 +489,24 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             } else {
                 approversToNotify.addAll(roleMembers);
             }
+        } else if (WorkflowEngineConstants.APPROVER_TYPE_GROUPS.equalsIgnoreCase(approverType)) {
+            List<String> groupMembers = new ArrayList<>();
+            try {
+                groupMembers = getUserIdsAssignedToGroup(approverIdentifier, tenantDomain);
+            } catch (WorkflowEngineException e) {
+                log.error("Error while retrieving assigned user IDs for group: {} in tenant: {}. " +
+                                "Continuing without adding notifications for this group.",
+                        approverIdentifier, tenantDomain, e);
+            }
+            if (CollectionUtils.isEmpty(groupMembers)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Group approver '{}' in tenant '{}' has no assigned users. " +
+                                    "No notifications will be sent for this group.",
+                            approverIdentifier, tenantDomain);
+                }
+            } else {
+                approversToNotify.addAll(groupMembers);
+            }
         } else {
             approversToNotify.add(approverIdentifier);
         }
@@ -727,8 +747,9 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
                 // Retrieving the tenant domain of the user corresponding to the userId to validate reserved task users.
                 String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                // Get the user's roles.
+                // Get the user's roles and groups.
                 List<String> entityIds = getAssignedRoleIds(userId, tenantDomain);
+                entityIds.addAll(getAssignedGroupIds(userId, tenantDomain));
                 // Add userId as eligible entity if the workflow has USER.
                 entityIds.add(userId);
 
@@ -779,6 +800,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
 
         List<String> roleIds = getAssignedRoleIds(userId, tenantDomain);
         entityIds.addAll(roleIds);
+        List<String> groupIds = getAssignedGroupIds(userId, tenantDomain);
+        entityIds.addAll(groupIds);
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         return approvalTaskDAO.getFilteredApprovalTaskDetails(entityIds, filter, limit, offset, tenantId);
     }
@@ -890,6 +913,36 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         }
     }
 
+    private List<String> getAssignedGroupIds(String userId, String tenantDomain) throws WorkflowEngineException {
+
+        try {
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager)
+                    WorkflowEngineServiceDataHolder.getInstance()
+                            .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
+            List<Group> groups = userStoreManager.getGroupListOfUser(userId, -1, 0, null, null);
+            return groups.stream().map(Group::getGroupID).collect(Collectors.toList());
+        } catch (UserStoreException e) {
+            throw new WorkflowEngineException(
+                    WorkflowEngineConstants.ErrorMessages
+                            .ERROR_OCCURRED_WHILE_RETRIEVING_APPROVAL_TASKS_FOR_USER.getDescription(), e);
+        }
+    }
+
+    private List<String> getUserIdsAssignedToGroup(String groupId, String tenantDomain) throws WorkflowEngineException {
+
+        try {
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager)
+                    WorkflowEngineServiceDataHolder.getInstance()
+                            .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
+            List<User> users = userStoreManager.getUserListOfGroup(groupId, -1, 0, null, null);
+            return users.stream().map(User::getUserID).collect(Collectors.toList());
+        } catch (UserStoreException e) {
+            throw new WorkflowEngineException("Error occurred while retrieving users assigned to group.", e);
+        }
+    }
+
     private void validateApprovers(String taskId) throws WorkflowEngineException {
 
         String userId = Utils.resolveUserID(CarbonContext.getThreadLocalCarbonContext().getUserId());
@@ -900,6 +953,11 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
         if (ENTITY_TYPE_USERS.equals(approverDTO.getApproverType()) ||
                 ENTITY_TYPE_CLAIMED_USERS.equals(approverDTO.getApproverType())) {
             if (approverDTO.getApproverName().equals(userId)) {
+                isAssignedApprovalTask = true;
+            }
+        } else if (WorkflowEngineConstants.APPROVER_TYPE_GROUPS.equals(approverDTO.getApproverType())) {
+            List<String> groupIds = getAssignedGroupIds(userId, tenantDomain);
+            if (groupIds.contains(approverDTO.getApproverName())) {
                 isAssignedApprovalTask = true;
             }
         } else {
@@ -1060,7 +1118,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                             .workflowId(workflowId)
                             .newStatus(reservedStatus);
                     auditLogger.printAuditLog(auditBuilder);
-                } else if (WorkflowEngineConstants.APPROVER_TYPE_ROLES.equals(approverType)) {
+                } else if (WorkflowEngineConstants.APPROVER_TYPE_ROLES.equals(approverType) ||
+                        WorkflowEngineConstants.APPROVER_TYPE_GROUPS.equals(approverType)) {
                     // Create a new task for the user who claimed the task.
                     String newTaskId = UUID.randomUUID().toString();
                     approvalTaskDAO.addApproversOfRequest(newTaskId, workflowRequestID, workflowId,
