@@ -73,7 +73,7 @@ public class Utils {
 
         Map<Integer, List<String>> newParamValuesForApprovalSteps = getParamValuesForApprovalSteps(newParams);
         Map<Integer, List<String>> existingParamValuesForApprovalSteps = getParamValuesForApprovalSteps(oldParams);
-        List<Integer> modifiedSteps = new java.util.ArrayList<>();
+        List<Integer> modifiedSteps = new ArrayList<>();
 
         // Check for modified and new steps.
         for (Map.Entry<Integer, List<String>> approvalStep : newParamValuesForApprovalSteps.entrySet()) {
