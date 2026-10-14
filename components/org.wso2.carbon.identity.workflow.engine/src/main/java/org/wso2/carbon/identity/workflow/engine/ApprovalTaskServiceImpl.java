@@ -120,6 +120,7 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
     private static final String ROLE_ASSOCIATED_APPLICATION_PARAM_NAME = "Role Associated Application";
     private static final String TENANT_DOMAIN_PARAM_NAME = "Tenant Domain";
     private static final String COMMA_SEPARATOR = ",";
+    private static final String UPDATE_ROLES_OF_USERS_EVENT = "UPDATE_ROLES_OF_USERS";
     private static final String ROLE_NOT_FOUND_ERROR_CODE = "RMA-60007";
     private static final String Q_NAME_INITIATOR_CHANNELS_PREFIX = "NotificationForInitiator-channels";
     private static final String CHANNEL_SMS = "sms";
@@ -1188,6 +1189,8 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
             if (value != null) {
                 String valueString = value.toString().trim();
                 String paramString = param.getName().trim();
+                boolean isUserListParam = USERS_TO_BE_ADDED_PARAM_NAME.equals(paramString)
+                        || USERS_TO_BE_DELETED_PARAM_NAME.equals(paramString);
                 if (ROLE_ID_PARAM_NAME.equals(param.getName())) {
                     String tenantDomain = IdentityTenantUtil.getTenantDomain(workflowRequest.getTenantId());
                     try {
@@ -1208,8 +1211,13 @@ public class ApprovalTaskServiceImpl implements ApprovalTaskService {
                             throw new WorkflowEngineException(e.getMessage(), e);
                         }
                     }
-                } else if (USERS_TO_BE_ADDED_PARAM_NAME.equals(paramString)
-                        || USERS_TO_BE_DELETED_PARAM_NAME.equals(paramString)) {
+                } else if (isUserListParam && value instanceof List
+                        && !UPDATE_ROLES_OF_USERS_EVENT.equals(workflowRequest.getEventType())) {
+                    // Only the role v2 users update request carries user IDs; others carry usernames.
+                    valueString = ((List<String>) value).stream()
+                            .filter(StringUtils::isNotBlank)
+                            .collect(Collectors.joining(COMMA_SEPARATOR));
+                } else if (isUserListParam) {
                     try {
                         AbstractUserStoreManager userStoreManager =
                                 (AbstractUserStoreManager) WorkflowEngineServiceDataHolder.getInstance()
