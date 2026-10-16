@@ -35,6 +35,7 @@ public class WorkflowEngineConstants {
     public static final String RELATIONSHIP_ID_IN_REQUEST_COLUMN = "RELATIONSHIP_ID";
     public static final String APPROVER_TYPE_USERS = "users";
     public static final String APPROVER_TYPE_ROLES = "roles";
+    public static final String APPROVER_TYPE_GROUPS = "groups";
     public static final String REQUEST_ID_COLUMN = "REQUEST_ID";
     public static final int NO_CURRENT_STEP = -1;
     public static final String Q_NAME_STEP_SEPARATOR = "-";
@@ -144,6 +145,7 @@ public class WorkflowEngineConstants {
         public static final String ENTITY_TYPE_ROLES = "roles";
         public static final String ENTITY_TYPE_USERS = "users";
         public static final String ENTITY_TYPE_CLAIMED_USERS = "claimedUsers";
+        public static final String ENTITY_TYPE_GROUPS = "groups";
         public static final String CLAIMS_PROPERTY_NAME = "Claims";
     }
 
